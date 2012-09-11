@@ -1,0 +1,225 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for media_theplatform_mpx.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function media_theplatform_mpx_schema() {
+  $schema['mpx_player'] = array(
+    'description' => 'Stores imported mpx Players.',
+    'fields' => array(
+      'player_id' => array(
+        'description' => 'The primary identifier for a Player.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'title' => array(
+        'description' => 'Title in thePlatform',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'description' => array(
+        'description' => 'Description in thePlatform',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'id' => array(
+        'description' => 'Id in thePlatform',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'pid' => array(
+        'description' => 'PID in thePlatform',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'guid' => array(
+        'description' => 'Title of the Player',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'fid' => array(
+        'description' => 'Fid in file_managed',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'head_html' => array(
+        'type' => 'blob',
+        'description' => 'HTML in the <head> tag',
+      ),
+      'body_html' => array(
+        'type' => 'blob',
+        'description' => 'HTML in the <head> tag',
+      ),
+      'created' => array(
+        'description' => 'timestamp of created',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'updated' => array(
+        'description' => 'timestamp of import',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => 'Player status',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+    ),
+    'primary key' => array('player_id'),
+  );
+  $schema['mpx_video'] = array(
+    'description' => 'Stores imported mpx Videos.',
+    'fields' => array(
+      'video_id' => array(
+        'description' => 'The primary identifier for a Video.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'title' => array(
+        'description' => 'Title in thePlatform',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'description' => array(
+        'description' => 'Description in thePlatform',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'guid' => array(
+        'description' => 'Guid in thePlatform',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'fid' => array(
+        'description' => 'Fid in file_managed',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'thumbnail_url' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'description' => 'thumbnail URL',
+      ),
+      'file_url' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'description' => 'File URL',
+      ),
+      'created' => array(
+        'description' => 'timestamp of created',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'updated' => array(
+        'description' => 'timestamp of import',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => 'Video status',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+    ),
+    'primary key' => array('video_id'),
+  );
+  $schema['mpx_log'] = array(
+    'description' => 'Stores mpx log data.',
+    'fields' => array(
+      'log_id' => array(
+        'description' => 'Counter ID field',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'User uid',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'type' => array(
+        'description' => 'Log type',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'type_id' => array(
+        'description' => 'User uid',
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => NULL,
+      ),
+      'action' => array(
+        'description' => 'Action desc',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'details' => array(
+        'type' => 'blob',
+        'description' => 'Action details',
+      ),
+      'timestamp' => array(
+        'description' => 'timestamp of created',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('log_id'),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function media_theplatform_mpx_install() {
+  return array();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function media_theplatform_mpx_uninstall() {
+  drupal_load('module', 'media_theplatform_mpx');
+  foreach (media_theplatform_mpx_variable_default() as $variable => $value) {
+    media_theplatform_mpx_variable_del($variable);
+  }
+  return array(array('success' => TRUE, 'query' => "Deleted all variables in the Media: mpx namespace."));
+}

@@ -1,0 +1,330 @@
+<?php
+/**
+ * @file
+ * Functions for media_theplatform_mpx.module.
+ */
+
+define('MPX_ADMIN_PATH', 'admin/config/media/theplatform');
+define('MPX_JS_FILE', 'http://pdk.theplatform.com/pdk/tpPdk.js');
+define('MPX_ICON', drupal_get_path('module', 'media_theplatform_mpx') . '/images/mpx_logo.png');
+define('MPX_DEBUG_MODE', 0);
+
+// A registry of variable_get defaults.
+include_once ('includes/media_theplatform_mpx.variables.inc');
+// Hooks and callbacks for integrating with File Entity module for display.
+include_once ('includes/media_theplatform_mpx.formatters.inc');
+
+// Helper functions.
+include_once ('media_theplatform_mpx.helpers.php');
+include_once ('media_theplatform_mpx.player.php');
+include_once ('media_theplatform_mpx.video.php');
+include_once ('media_theplatform_mpx.admin.inc');
+
+/**
+ * Implements hook_menu().
+ */
+function media_theplatform_mpx_menu() {
+  $items = array();
+  $items[MPX_ADMIN_PATH] = array(
+    'title' => 'Media: thePlatform mpx settings',
+    'description' => 'Configure thePlatForm mpx integration settings.',
+    'page callback' => 'media_theplatform_mpx_page_account',
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => array('administer mpx account'),
+  );
+  $items['admin/content/media/mpx_player'] = array(
+    'title' => 'mpx Players',
+    'page callback' => 'media_theplatform_mpx_page_mpx_players',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array('administer media'),
+    'weight' => 30,
+  );
+  $items['admin/content/media/mpx_video'] = array(
+    'title' => 'mpx Videos',
+    'page callback' => 'media_theplatform_mpx_page_mpx_videos',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array('administer media'),
+    'weight' => 40,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_init().
+ */
+function media_theplatform_mpx_init() {
+  // Necessary JS for mpx Players to render.
+  drupal_add_js(MPX_JS_FILE, 'external');
+  // Add module CSS.
+  drupal_add_css(drupal_get_path('module', 'media_theplatform_mpx') . '/css/media_theplatform_mpx.css', array(
+    'group' => CSS_DEFAULT,
+    'type' => 'file',
+    'every_page' => TRUE)
+  );
+  // Add thePlatform Player Runtimes to <head>.
+  $preferred_runtimes_meta = array(
+    '#type' => 'html_tag',
+    '#tag' => 'meta',
+    '#attributes' => array(
+      'name' => 'tp:PreferredRuntimes',
+      'content' => media_theplatform_mpx_variable_get('runtimes'),
+    ),
+  );
+  drupal_add_html_head($preferred_runtimes_meta, 'meta_tp_preferred_runtimes');
+}
+
+/**
+ * Implements hook_media_browser_plugin_info().
+ */
+function media_theplatform_mpx_media_browser_plugin_info() {
+  $plugins = array();
+  if (user_access('administer media')) {
+    $plugins['media_theplatform_mpx_videos'] = array(
+      '#weight' => -10,
+    );
+    $plugins['media_theplatform_mpx_players'] = array(
+      '#weight' => -10,
+    );
+  }
+  return $plugins;
+}
+
+/**
+ * Implements hook_media_browser_plugin_view().
+ */
+function media_theplatform_mpx_media_browser_plugin_view($plugin_name, $params) {
+  $path = drupal_get_path('module', 'media');
+
+  $types = isset($params['types']) ? $params['types'] : array();
+  $multiselect = isset($params['multiselect']) ? $params['multiselect'] : FALSE;
+
+  $redirect = array('media/browser', array('query' => array('render' => 'media-popup')));
+  switch ($plugin_name) {
+    case 'media_theplatform_mpx_videos':
+      $from_web_form = drupal_get_form('media_theplatform_mpx_form_media_browser', 'videos');
+      return array(
+        '#title' => t('mpx Videos'),
+        'form' => array($from_web_form),
+        '#attached' => array(),
+      );
+    break;
+    case 'media_theplatform_mpx_players':
+      $from_web_form = drupal_get_form('media_theplatform_mpx_form_media_browser', 'players');
+      return array(
+        '#title' => t('mpx Players'),
+        'form' => array($from_web_form),
+        '#attached' => array(),
+      );
+    break;
+  }
+  return array();
+}
+
+/**
+ * Implements hook_theme().
+ */
+function media_theplatform_mpx_theme($existing, $type, $theme, $path) {
+  return array(
+    'media_theplatform_mpx_video' => array(
+      'variables' => array(
+        'uri' => NULL,
+      ),
+      'file' => 'media_theplatform_mpx.theme.inc',
+      'path' => $path . '/includes/themes',
+      'template' => 'media-theplatform-mpx-video',
+    ),
+  );
+}
+
+/**
+ * Implements hook_media_internet_providers().
+ */
+function media_theplatform_mpx_media_internet_providers() {
+  return array(
+    'MediaInternetThePlatformMpxHandler' => array(
+      'title' => 'All media from thePlatform mpx must be imported and cannot be added on this tab.',
+    ),
+  );
+}
+
+/**
+ * Implements hook_stream_wrappers().
+ */
+function media_theplatform_mpx_stream_wrappers() {
+  return array(
+    'mpx' => array(
+      'name' => t('mpx videos'),
+      'class' => 'MediaThePlatformMpxStreamWrapper',
+      'description' => t('Videos provided by ThePlatform.'),
+      'type' => STREAM_WRAPPERS_READ_VISIBLE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_ctools_plugin_api().
+ */
+function media_theplatform_mpx_ctools_plugin_api($owner, $api) {
+  static $api_versions = array(
+    'file_entity' => array(
+      'file_default_displays' => 1,
+    ),
+  );
+  if (isset($api_versions[$owner][$api])) {
+    return array('version' => $api_versions[$owner][$api]);
+  }
+}
+
+/**
+ * Implements hook_media_parse().
+ *
+ * @todo This hook should be deprecated. Refactor Media module to not call it
+ *   any more, since media_internet should be able to automatically route to the
+ *   appropriate handler.
+ */
+function media_theplatform_mpx_media_parse($embed_code) {
+  module_load_include('media_theplatform_mpx', 'inc', 'includes/MediaInternetThePlatformMpxHandler');
+  $handler = new MediaInternetThePlatformMpxHandler($embed_code);
+  return $handler->parse($embed_code);
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function media_theplatform_mpx_form_alter(&$form, &$form_state, $form_id) {
+  // Check if it's media: single file delete form OR bulk media delete form.
+  if ($form['#id'] == 'media-multiple-delete-confirm' || ($form['#id'] == 'media-admin' && isset($form['operation']) && $form['operation']['#value'] == 'delete')) {
+    foreach ($form['files'] as $fid) {
+      if (isset($fid['#value'])) {
+        $file = file_load($fid['#value']);
+        // If mpx file and its active, do not allow delete.
+        if ($file->filemime == 'video/mpx' && media_theplatform_mpx_is_file_active($file)) {
+          drupal_set_message(t('You cannot active mpx Videos or mpx Players from Drupal.  Please set to inactive in mpx and then re-sync to set the status to inactive.'), 'warning');
+          unset($form['description']);
+          unset($form['actions']['submit']);
+          return;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_file_delete().
+ */
+function media_theplatform_mpx_file_delete($file) {
+  // If its a mpx file, delete its record in mpx_player or mpx_video.
+  if ($file->filemime == 'video/mpx') {
+    $wrapper = file_stream_wrapper_get_instance_by_uri($file->uri);
+    $parts = $wrapper->get_parameters();
+    if ($parts['mpx_type'] == 'player') {
+      $player = media_theplatform_mpx_get_mpx_player_by_fid($file->fid);
+      db_delete('mpx_player')->condition('fid', $file->fid)->execute();
+      $deleted_id = $player['player_id'];
+    }
+    elseif ($parts['mpx_type'] == 'video') {
+      $video = media_theplatform_mpx_get_mpx_video_by_fid($file->fid);
+      db_delete('mpx_video')->condition('fid', $file->fid)->execute();
+      $deleted_id = $video['video_id'];
+    }
+    // Log deletion.
+    global $user;
+    $log = array(
+      'uid' => $user->uid,
+      'type' => $parts['mpx_type'],
+      'type_id' => $deleted_id,
+      'action' => 'deleted',
+      'details' => 'deleted file fid = ' . $file->fid,
+    );
+    media_theplatform_mpx_insert_log($log);
+  }
+}
+
+/**
+ * Implements hook_media_token_to_markup_alter().
+ *
+ * - see media/includes/media.filter.inc
+ * - If we are editing WYSIYWG content, check if this file is inactive.
+ * - If it is inactive, display warning message.
+ */
+function media_theplatform_mpx_media_token_to_markup_alter(array &$element, array $tag, array $settings) {
+  // If this is mpx file and we're in wyswyig:
+  if ($tag['file']->filemime == 'video/mpx' && isset($settings['wysiwyg'])) {
+    $file = $element['#file'];
+    if (!media_theplatform_mpx_is_file_active($file)) {
+      print '<div class="messages warning">' . t('This markup contains inactive mpx Files.') . '</div>';
+      $element['#attributes']['class'] = 'media-image mpx-inactive';
+    }
+  }
+}
+
+/**
+ * Write data from given array $data into the mpx_log table.
+ */
+function media_theplatform_mpx_insert_log($data) {
+  $insert = db_insert('mpx_log')
+  ->fields(array(
+    'uid' => $data['uid'],
+    'type' => $data['type'],
+    'type_id' => $data['type_id'],
+    'action' => $data['action'],
+    'timestamp' => REQUEST_TIME,
+    'details' => $data['details'],
+  ))
+  ->execute();
+}
+
+/**
+ * Implements hook_cron().
+ */
+function media_theplatform_mpx_cron() {
+  // Don't do anything if we don't have signIn token.
+  if (!media_theplatform_mpx_variable_get('token')) {
+    return;
+  }
+  // Check if username/password are still valid.
+  $username = media_theplatform_mpx_variable_get('username');
+  $pass = media_theplatform_mpx_variable_get('password');
+  if ($username && $pass) {
+    $valid_login = media_theplatform_mpx_signin($username, $pass);
+    if (!$valid_login) {
+      watchdog('media_theplatform_mpx', 'Invalid username/password for thePlatform.');
+    }
+    else {
+      if (media_theplatform_mpx_variable_get('cron_players')) {
+        media_theplatform_mpx_import_all_players('cron');
+      }
+      if (media_theplatform_mpx_variable_get('cron_videos')) {
+        media_theplatform_mpx_import_all_videos('cron');
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function media_theplatform_mpx_permission() {
+  return array(
+    'administer mpx account' => array(
+      'title' => t('Administer mpx Account'),
+      'description' => t('Set login for thePlatform, Import Account'),
+    ),
+    'administer mpx_player settings' => array(
+      'title' => t('Administer mpx Players'),
+      'description' => t('Set Default Player, Runtimes, Cron settings, Sync Players.'),
+    ),
+    'sync mpx_player' => array(
+      'title' => t('Sync mpx Players manually'),
+      'description' => t('Sync Players Only'),
+    ),
+    'administer mpx_video settings' => array(
+      'title' => t('Administer mpx Videos'),
+      'description' => t('Set Imported Feed, Cron settings, Sync Videos.'),
+    ),
+    'sync mpx_video' => array(
+      'title' => t('Sync mpx Videos manually'),
+      'description' => t('Sync Videos Only'),
+    ),
+  );
+}
