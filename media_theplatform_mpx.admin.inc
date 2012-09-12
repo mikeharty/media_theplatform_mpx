@@ -133,9 +133,24 @@ function media_theplatform_mpx_form_account_theplatform_submit($form, &$form_sta
   media_theplatform_mpx_variable_set('import_account', $import_account);
   // Import all players for this account.
   $import = media_theplatform_mpx_import_all_players('manual');
-  drupal_set_message(t('Import account set.') . ' ' . l(t('All Players imported from the Import account.'), 'admin/content/media/mpx_player'));
+  drupal_set_message(t('Import account set.') . ' ' . l(t('All Players imported from the Import account.'), MPX_PATH_PLAYER));
 }
 
+/**
+ * Returns TRUE if token and import_account set.  If not, drupal_set_message and returns FALSE.
+ */
+function media_theplatform_mpx_check_account_settings() {
+  if (!media_theplatform_mpx_variable_get('token') || !media_theplatform_mpx_variable_get('import_account')) {
+    if (user_access('administer mpx account')) {
+      drupal_set_message(t('Your mpx Account is not configured.') . ' ' . l(t('Configure mpx Account.'), MPX_PATH_ADMIN), 'error');    
+    }
+    else {
+      drupal_set_message(t('Your mpx Account is not configured.') . ' ' . t('Please contact your System Administrator.'), 'error');
+    }
+    return FALSE;
+  }
+  return TRUE;
+}
 
 /******************* mpx Players *****************************/
 
@@ -144,30 +159,23 @@ function media_theplatform_mpx_form_account_theplatform_submit($form, &$form_sta
  */
 function media_theplatform_mpx_page_mpx_players() {
   $output = '';
-  $form_player_sync = drupal_get_form('media_theplatform_mpx_form_mpx_player_sync');
-  
-  // If no players exist in mpx_player table:
-  if (media_theplatform_mpx_get_mpx_player_count() == 0) {
-    $output .= '<div class="message">' . t('There are no mpx Players imported into the Media Library.') . '</div>';
-    // Display sync player form if user has access.
-    if (user_access('sync mpx_player')) {
+
+  // Display forms if signin and import_account
+  if (media_theplatform_mpx_check_account_settings()) {
+    // Render settings form.
+    if (user_access('administer mpx_player settings')) {
+      $form_player_settings = drupal_get_form('media_theplatform_mpx_form_mpx_player_settings');
+      $output .= render($form_player_settings);
+      $sync_access = TRUE;
+    }
+    // Render sync form.
+    if (isset($sync_access) || user_access('sync mpx_player')) {
+      $form_player_sync = drupal_get_form('media_theplatform_mpx_form_mpx_player_sync');
       $output .= render($form_player_sync);
     }
-    return $output;
   }
-  // Render form: default Player.
-  if (user_access('administer mpx_player settings')) {
-    $form_player_settings = drupal_get_form('media_theplatform_mpx_form_mpx_player_settings');
-    $output = render($form_player_settings);
-    $sync_access = TRUE;
-  }
-  // Render form: sync Players.
-  if (isset($sync_access) || user_access('sync mpx_player')) {
-    $output .= render($form_player_sync);
-  }
-  // List all mpx Players.
-  $output .= media_theplatform_mpx_get_table_mpx_players();
 
+  $output .= media_theplatform_mpx_get_table_mpx_players();
   return $output;
 }
 
@@ -178,6 +186,9 @@ function media_theplatform_mpx_page_mpx_players() {
  */
 function media_theplatform_mpx_form_mpx_player_settings($form, &$form_state) {
   $player_select = media_theplatform_mpx_get_players_select();
+  if (!$player_select) {
+    return FALSE;
+  }
   $default = media_theplatform_mpx_variable_get('default_player_fid');
   if ($default && array_key_exists($default, $player_select)) {
     $collapsed = TRUE;
@@ -187,14 +198,14 @@ function media_theplatform_mpx_form_mpx_player_settings($form, &$form_state) {
   }
   $form['player_settings'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Player Settings'),
+    '#title' => t('mpxPlayer Settings'),
     '#collapsible' => TRUE,
     '#collapsed' => $collapsed,
   );
   $form['player_settings'][media_theplatform_mpx_NAMESPACE . 'default_player_fid'] = array(
     '#type' => 'select',
-    '#title' => t('Select Default mpx Player:'),
-    '#description' => t('This will be the mpx Player used for any standalone mpx Video clips.') . '<p>' . t('Note: If you change the Default Player, you must clear the Drupal cache in order to update the mpx Videos.') . '</p>',
+    '#title' => t('Select Default mpxPlayer:'),
+    '#description' => t('This will be the mpxPlayer used for any imported mpxMedia.') . '<p>' . t('Note: If you change the Default mpxPlayer, you must clear the Drupal cache in order to update the mpxMedia.') . '</p>',
     '#options' => $player_select,
     '#empty_option' => t('- Select -'),
     '#required' => TRUE,
@@ -203,20 +214,20 @@ function media_theplatform_mpx_form_mpx_player_settings($form, &$form_state) {
   $form['player_settings'][media_theplatform_mpx_NAMESPACE . 'runtimes'] = array(
     '#type' => 'select',
     '#title' => t('Select Site-wide Runtimes:'),
-    '#description' => t('Select how all mpx Media Files should be rendered.'),
+    '#description' => t('Select how all mpxPlayers should be rendered.'),
     '#options' => media_theplatform_mpx_get_runtimes_select(),
     '#required' => TRUE,
     '#default_value' => media_theplatform_mpx_variable_get('runtimes'),
   );
   $form['player_settings'][media_theplatform_mpx_NAMESPACE . 'cron_players'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Sync Players on Cron'),
+    '#title' => t('Sync mpxPlayers on Cron'),
     '#default_value' => media_theplatform_mpx_variable_get('cron_players'),
   );
   $form['player_settings']['actions'] = array('#type' => 'actions');
   $form['player_settings']['actions']['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Save Player Settings'),
+    '#value' => t('Save Settings'),
   );
   return $form;
 }
@@ -240,7 +251,7 @@ function media_theplatform_mpx_form_mpx_player_settings_submit($form, &$form_sta
   media_theplatform_mpx_variable_set('default_player_fid', $default_player);
   media_theplatform_mpx_variable_set('runtimes', $runtimes);
   media_theplatform_mpx_variable_set('cron_players', $cron_players);
-  drupal_set_message(t('Player Settings saved. You may need to clear the Drupal cache for updates to the Default Player to appear.'));
+  drupal_set_message(t('Player Settings saved. You must clear the Drupal cache for updates to the Default mpxPlayer to appear.'));
 }
 
 /**
@@ -249,11 +260,6 @@ function media_theplatform_mpx_form_mpx_player_settings_submit($form, &$form_sta
  * @ingroup forms
  */
 function media_theplatform_mpx_form_mpx_player_sync($form, &$form_state) {
-  if (!media_theplatform_mpx_variable_get('token')) {
-    drupal_set_message(t('Cannot Sync mpx Players: Invalid signIn token.  Please contact your System Administrator.'), 'error');
-    return FALSE;
-  }
-  // @todo - Replace this with a variable.
   if (media_theplatform_mpx_get_mpx_player_count() > 0) {
     $collapsed = TRUE;
   }
@@ -262,15 +268,15 @@ function media_theplatform_mpx_form_mpx_player_sync($form, &$form_state) {
   }
   $form['player_sync'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Sync Players'),
-    '#description' => t('Note: Any mpx Player marked as "Disabled" in thePlatform mpx will not be retrieved in the Sync process.'),
+    '#title' => t('Sync mpxPlayers'),
+    '#description' => t('Note: Any mpxPlayer marked as "Disabled" in thePlatform mpx will not be retrieved in the Sync process.'),
     '#collapsible' => TRUE,
     '#collapsed' => $collapsed,
   );
   $form['player_sync']['actions'] = array('#type' => 'actions');
   $form['player_sync']['actions']['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Sync Players Now'),
+    '#value' => t('Sync mpxPlayers Now'),
   );
   return $form;
 }
@@ -281,7 +287,7 @@ function media_theplatform_mpx_form_mpx_player_sync($form, &$form_state) {
 function media_theplatform_mpx_form_mpx_player_sync_submit($form, &$form_state) {
   $import = media_theplatform_mpx_import_all_players('manual');
   if (!$import) {
-    drupal_set_message(t('No mpx Players were found for your account on thePlatform.  Please create at least 1 mpx Player in thePlatform and then click Sync Players Now.'), 'error');
+    drupal_set_message(t('No mpxPlayers were found for your account on thePlatform.  Please create at least 1 mpxPlayer in thePlatform and then click Sync mpxPlayers Now.'), 'error');
   }
   else {
     drupal_set_message(t(':num mpx Players returned:', array(':num' => $import['total'])));
@@ -299,7 +305,7 @@ function media_theplatform_mpx_get_table_mpx_players() {
     // The header gives the table the information it needs in order to make
     // the query calls for ordering. TableSort uses the field information
     // to know what database column to sort by.
-    array('data' => t('Player ID'), 'field' => 'p.player_id'),
+    array('data' => t('ID'), 'field' => 'p.player_id'),
     array('data' => NULL),
     array('data' => t('Title'), 'field' => 'p.title'),
     array('data' => t('Description'), 'field' => 'p.description'),
@@ -314,7 +320,10 @@ function media_theplatform_mpx_get_table_mpx_players() {
   $result = $query
     ->orderByHeader($header)
     ->execute();
-
+  $num_rows = $query->countQuery()->execute()->fetchField();
+  if ($num_rows == 0) {
+    return '<div class="message">' . t('No mpxPlayers have been imported.') . '</div>';
+  }
   foreach ($result as $player) {
     if ($player->fid == media_theplatform_mpx_variable_get('default_player_fid')) {
       $default = '[default]';
@@ -342,20 +351,15 @@ function media_theplatform_mpx_get_table_mpx_players() {
  * Page callback - display all mpx Video media and forms.
  */
 function media_theplatform_mpx_page_mpx_videos() {
-  // If there's no default player selected, error msg.
-  if (!media_theplatform_mpx_variable_get('default_player_fid')) {
-    drupal_set_message(t('You do not have a Default mpx Player selected.  You will need to set this in order to view any mpx Videos on your site.'), 'error');
-  }
   $output = '';
-  $settings_access = user_access('administer mpx_video settings');
-  $sync_access = user_access('sync mpx_video');
-  if ($settings_access || $sync_access) {
-    $output .= media_theplatform_mpx_get_mpx_video_forms($settings_access, $sync_access);
+  if (media_theplatform_mpx_check_account_settings()) {
+    $settings_access = user_access('administer mpx_video settings');
+    $sync_access = user_access('sync mpx_video');
+    if ($settings_access || $sync_access) {
+      $output .= media_theplatform_mpx_get_mpx_video_forms($settings_access, $sync_access);
+    }
   }
   $output .= media_theplatform_mpx_get_table_mpx_videos();
-  if (isset($warning)) {
-    $output = $warning . $output;
-  }
   return $output;
 }
 
@@ -363,12 +367,6 @@ function media_theplatform_mpx_page_mpx_videos() {
  * Return rendered mpx_video forms based on signIn and user_access.
  */
 function media_theplatform_mpx_get_mpx_video_forms($settings_access, $sync_access) {
-
-  // If no token, no forms.
-  if (!media_theplatform_mpx_variable_get('token')) {
-    drupal_set_message(t('Cannot connect to thePlatform: Invalid signIn token.  Please contact your System Administrator.'), 'error');
-    return FALSE;
-  }
   // Request all feeds for the account.
   $feeds = media_theplatform_mpx_get_feeds_select();
   // If no results from thePlatform, prompt user to create one in thePlatform.
@@ -416,28 +414,28 @@ function media_theplatform_mpx_form_mpx_video_settings($form, &$form_state, $fee
   }
   $form['video_settings'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Video Settings'),
+    '#title' => t('mpxMedia Settings'),
     '#collapsible' => TRUE,
     '#collapsed' => $collapsed,
   );
   $form['video_settings'][media_theplatform_mpx_NAMESPACE . 'feed'] = array(
     '#type' => 'select',
-    '#title' => t('Sync Videos From:'),
+    '#title' => t('Sync mpxMedia From:'),
     '#options' => $feeds,
     '#empty_option' => t('- Select -'),
     '#required' => TRUE,
     '#default_value' => media_theplatform_mpx_variable_get('feed'),
-    '#description' => t('Select your mpx Feed to use for importing videos into the Media Library.') . '<p>' . t('Note: mpx Feeds which have been marked as "Disabled" in thePlatform mpx will not appear in this dropdown.') . '</p>',
+    '#description' => t('Select your mpx Feed to use for importing mpxMedia into the Drupal Media Library.') . '<p>' . t('Note: mpx Feeds which have been marked as "Disabled" in thePlatform mpx will not appear in this dropdown.') . '</p>',
   );
   $form['video_settings'][media_theplatform_mpx_NAMESPACE . 'cron_videos'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Sync Videos on Cron'),
+    '#title' => t('Sync mpxMedia on Cron'),
     '#default_value' => media_theplatform_mpx_variable_get('cron_videos'),
   );
   $form['video_settings']['actions'] = array('#type' => 'actions');
   $form['video_settings']['actions']['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Save Video Settings'),
+    '#value' => t('Save Settings'),
   );
   return $form;
 }
@@ -460,7 +458,7 @@ function media_theplatform_mpx_form_mpx_video_settings_submit($form, &$form_stat
   media_theplatform_mpx_insert_log($log);
   media_theplatform_mpx_variable_set('feed', $feed);
   media_theplatform_mpx_variable_set('cron_videos', $cron_videos);
-  drupal_set_message(t('Import Feed set.  Click "Sync Videos Now" to import videos from this Feed.'));
+  drupal_set_message(t('Import Feed set.  Click "Sync mpxMedia Now" to import mpxMedia from this Feed.'));
 }
 
 /**
@@ -469,11 +467,6 @@ function media_theplatform_mpx_form_mpx_video_settings_submit($form, &$form_stat
  * @ingroup forms
  */
 function media_theplatform_mpx_form_mpx_video_sync($form, &$form_state) {
-  if (!media_theplatform_mpx_variable_get('token')) {
-    drupal_set_message(t('Cannot Sync mpx Videos: Invalid signIn token.  Please contact your System Administrator.'), 'error');
-    return FALSE;
-  }
-  // @todo - Replace this with a variable.
   if (media_theplatform_mpx_get_mpx_video_count() > 0) {
     $collapsed = TRUE;
   }
@@ -482,15 +475,15 @@ function media_theplatform_mpx_form_mpx_video_sync($form, &$form_state) {
   }
   $form['video_sync'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Sync Videos'),
-    '#description' => t('Note: Any mpx Video which is no longer included in the Import Feed will be set to "Inactive".  Videos must have a Title and Thumbnail set in thePlatform.'),
+    '#title' => t('Sync mpxMedia'),
+    '#description' => t('Note: Any mpxMedia which is no longer included in the Import Feed will be set to "Inactive".  mpxMedia must have a Title and Thumbnail set in thePlatform.'),
     '#collapsible' => TRUE,
     '#collapsed' => $collapsed,
   );
   $form['video_sync']['actions'] = array('#type' => 'actions');
   $form['video_sync']['actions']['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Sync Videos Now'),
+    '#value' => t('Sync mpxMedia Now'),
   );
   return $form;
 }
@@ -505,16 +498,16 @@ function media_theplatform_mpx_form_mpx_video_sync_submit($form, &$form_state) {
   }
   $import = media_theplatform_mpx_import_all_videos('manual');
   if (!$import) {
-    drupal_set_message(t('No mpx Media was found for the selected import Feed on thePlatform.  Please create add at least 1 mpx Media to the Feed in thePlatform and then click Sync Videos Now.'), 'error');
+    drupal_set_message(t('No mpxMedia was found for the selected import Feed on thePlatform.  Please create add at least 1 mpxMedia to the Feed in thePlatform and then click Sync mpxMedia Now.'), 'error');
   }
   elseif ($import == 'no thumbnails') {
-    drupal_set_message(t('One or more of the mpx Media in the selected Feed does not contain valid thumbnail data.  Please correct in thePlatform and then click Sync Videos Now.'), 'error');
+    drupal_set_message(t('One or more of the mpxMedia in the selected Feed does not contain valid thumbnail data.  Please correct in thePlatform and then click Sync mpxMedia Now.'), 'error');
   }
   else {
-    drupal_set_message(t(':num mpx Videos returned:', array(':num' => $import['total'])));
-    drupal_set_message(t(':num new mpx Videos created.', array(':num' => $import['inserts'])));
-    drupal_set_message(t(':num existing mpx Videos updated.', array(':num' => $import['updates'])));
-    drupal_set_message(t(':num existing mpx Videos inactivated.', array(':num' => $import['inactives'])));
+    drupal_set_message(t(':num mpxMedia returned:', array(':num' => $import['total'])));
+    drupal_set_message(t(':num new mpxMedia created.', array(':num' => $import['inserts'])));
+    drupal_set_message(t(':num existing mpxMedia updated.', array(':num' => $import['updates'])));
+    drupal_set_message(t(':num existing mpxMedia inactivated.', array(':num' => $import['inactives'])));
   }
 }
 
@@ -526,7 +519,7 @@ function media_theplatform_mpx_get_table_mpx_videos() {
     // The header gives the table the information it needs in order to make
     // the query calls for ordering. TableSort uses the field information
     // to know what database column to sort by.
-    array('data' => t('Video ID'), 'field' => 'v.video_id'),
+    array('data' => t('ID'), 'field' => 'v.video_id'),
     array('data' => NULL),
     array('data' => t('Title'), 'field' => 'v.title'),
     array('data' => t('Description'), 'field' => 'v.description'),
@@ -542,14 +535,24 @@ function media_theplatform_mpx_get_table_mpx_videos() {
     ->orderByHeader($header)
     ->execute();
   $num_rows = $query->countQuery()->execute()->fetchField();
-  if ($num_rows == 0) {
-    return '<div class="message">' . t('No mpx Videos have been imported.') . '</div>';
+  // If there's no valid default player selected, error msg.
+  if (!media_theplatform_mpx_is_valid_default_player()) {
+    if (user_access('administer player settings')) {
+      drupal_set_message(t('A Default mpxPlayer must be set to view mpxMedia.') . ' ' . l('Configure mpxPlayer Settings', MPX_PATH_PLAYER), 'error');      
+    }
+    else {
+      drupal_set_message(t('A Default mpxPlayer must be set to view mpxMedia.') . ' ' . t('Please contact your System Administrator.'), 'error');
+    }
   }
+  if ($num_rows == 0) {
+    return '<div class="message">' . t('No mpxMedia has been imported.') . '</div>';
+  }  
   foreach ($result as $video) {
     $file = file_load($video->fid);
+    $thumbnail = media_get_thumbnail_preview($file);
     $rows[] = array(
       $video->video_id,
-      l(drupal_render(media_get_thumbnail_preview($file)), 'media/' . $video->fid, array('html' => TRUE)),
+      l(drupal_render($thumbnail), 'media/' . $video->fid, array('html' => TRUE)),
       $video->title,
       $video->description,
       // $video->guid,
@@ -581,16 +584,18 @@ function media_theplatform_mpx_form_media_browser($form, &$form_state = array(),
   $files = array();
   if ($browser_type == 'videos') {
     $list = media_theplatform_mpx_get_all_mpx_videos();
+    $label = 'mpxMedia';
   }
   elseif ($browser_type == 'players') {
     $list = media_theplatform_mpx_get_all_mpx_players();
+    $label = 'mpxPlayers';
   }
   else {
     return FALSE;
   }
   if (count($list) == 0) {
     $form['no-items'] = array(
-      '#markup' => t('No mpx :type have been imported.', array(':type' => $browser_type)),
+      '#markup' => t('No :type have been imported.', array(':type' => $label)),
     );
     return $form;
   }
@@ -645,34 +650,4 @@ function media_theplatform_mpx_form_media_browser_submit($form, &$form_state) {
       'render' => 'media-popup',
       'fid' => $fid,
     )));
-}
-
-
-/********************* Module development stuff ***********************/
-/**
- * Used for testing only. Deletes all files with uri mpx://.
- */
-function media_theplatform_mpx_dev_delete_files() {
-
-  $result = db_select('file_managed', 'f')
-    ->fields('f')
-    ->condition('uri', 'mpx://%', 'LIKE')
-    ->execute();
-  $i = 0;
-  while ($record = $result->fetchAssoc()) {
-    $fid = file_load($record['fid']);
-    file_delete($fid);
-    $i++;
-  }
-  return $i;
-}
-
-/**
- * Use this (only if you mean it) to kill all existing mpx Media.
- */
-function media_theplatform_mpx_dev_delete() {
-  $result = db_truncate('mpx_player')->execute();
-  $result = db_truncate('mpx_video')->execute();
-  $num_files = media_theplatform_mpx_dev_delete_files();
-  drupal_set_message(t('Deleted :num files'), array(':num' => $num_files));
 }

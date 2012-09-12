@@ -4,7 +4,7 @@
  * Contains MediaThePlatformMpxStreamWrapper.
  *
  * Create an instance like this:
- * $mpx_player = new MediaThePlatformMpxStreamWrapper('mpx://p/[id]);
+ * $mpx_player = new MediaThePlatformMpxStreamWrapper('mpx://p/[pid]);
  * $mpx_video = new MediaThePlatformMpxStreamWrapper('mpx://m/[guid]);
  */
 
@@ -23,8 +23,12 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
 
     $url = parse_url($url);
     $parts = explode('/', $url['path']);
+
+    // If mpxMedia:
     if ($url['host'] == 'm') {
       $params['mpx_type'] = 'video';
+      // Use mpxMedia's Guid as the mpx_id for output HTML.
+      $params['mpx_id'] = $parts[1];
       $default_player = media_theplatform_mpx_get_mpx_player_by_fid(media_theplatform_mpx_variable_get('default_player_fid'));
       $params['player_pid'] = $default_player['pid'];
       if ($file) {
@@ -32,15 +36,19 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
         $params['video_file_url'] = $this_video['file_url'];
       }
     }
+
+    // Elseif mpxPlayer:
     elseif ($url['host'] == 'p') {
       $params['mpx_type'] = 'player';
       if ($file) {
         $this_player = media_theplatform_mpx_get_mpx_player_by_fid($file->fid);
         $params['player_pid'] = $this_player['pid'];
+        // Use mpxMedia's Pid as the mpx_id for output HTML.
+        $params['mpx_id'] = $this_player['pid'];        
       }
     }
-    // Get the string after the mpx://m|p/ to use as filename.
-    $params['mpx_id'] = $parts[1];
+    // Get the string after the mpx://m|p/ to use as mpx_id in rendered HTML.
+    // $params['mpx_id'] = $parts[1];
     return $params;
   }
 

@@ -75,14 +75,32 @@ function media_theplatform_mpx_get_runtimes_select() {
  */
 function media_theplatform_mpx_get_players_select() {
   // Retrieve players from mpx_player.
-  $result = db_select('mpx_player', 'p')
-    ->fields('p', array('fid', 'title'))
-    ->execute();
+  $query = db_select('mpx_player', 'p')
+    ->fields('p', array('fid', 'title'));
+  $result = $query->execute();
+  $num_rows = $query->countQuery()->execute()->fetchField();
+  if ($num_rows == 0) {
+    return FALSE;
+  }
   // Index by file fid.
   while ($record = $result->fetchAssoc()) {
     $players[$record['fid']] = $record['title'];
   }
   return $players;
+}
+
+/**
+ * Returns TRUE if default Player is set and is a valid record in mpx_player.
+ */
+function media_theplatform_mpx_is_valid_default_player(){
+  $default = media_theplatform_mpx_variable_get('default_player_fid');
+  if ($default) {
+    $players = media_theplatform_mpx_get_players_select();
+    if ($players && array_key_exists($default, $players)) {
+      return TRUE;
+    }
+  }
+  return FALSE;
 }
 
 /**

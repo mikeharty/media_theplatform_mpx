@@ -104,7 +104,7 @@ function media_theplatform_mpx_get_accounts_select() {
     media_theplatform_mpx_insert_log($log);
     return FALSE;
   }
-
+  $accounts = array();
   foreach ($result_data['entries'] as $entry) {
     $title = $entry['title'];
     $accounts[rawurlencode($title)] = $title;
@@ -117,6 +117,8 @@ function media_theplatform_mpx_get_accounts_select() {
     'details' => count($accounts) . ' accounts returned.',
   );
   media_theplatform_mpx_insert_log($log);
+  // Sort accounts alphabetically.
+  natcasesort($accounts);
   return $accounts;
 }
 
@@ -210,7 +212,8 @@ function media_theplatform_mpx_replace_html_ids($html, $new_id) {
  */
 function media_theplatform_mpx_append_html_id($div_id, $append, $html) {
   $find = 'id="' . $div_id . '"';
-  $replace = 'id="' . $div_id . $append . '" tp:scopes="scope' . $append . '"';
+  // Replace with 'div_id-append'.
+  $replace = 'id="' . $div_id . '-' . $append . '" tp:scopes="scope-' . $append . '"';
   return str_replace($find, $replace, $html);
 }
 
@@ -229,7 +232,7 @@ function media_theplatform_mpx_replace_css_ids($html, $new_id) {
 
   // Append $new_id to each id selector.
   foreach (media_theplatform_mpx_get_tp_ids() as $tp_id) {
-    $html = media_theplatform_mpx_append_string('#' . $tp_id, $new_id, $html);
+    $html = media_theplatform_mpx_append_string('#' . $tp_id, '-' . $new_id, $html);
   }
   // Replace body selector with #mpx_new_id
   $mpx_id = '#mpx-' . $new_id;
