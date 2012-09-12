@@ -191,7 +191,8 @@ function media_theplatform_mpx_schema() {
         'default' => '',
       ),
       'details' => array(
-        'type' => 'blob',
+        'type' => 'varchar',
+        'length' => 255,        
         'description' => 'Action details',
       ),
       'timestamp' => array(

@@ -12,8 +12,8 @@
  * Page callback to return signin / account forms.
  */
 function media_theplatform_mpx_page_account() {
-
-  $output = render(drupal_get_form('media_theplatform_mpx_form_signin_theplatform'));
+  $form_signin = drupal_get_form('media_theplatform_mpx_form_signin_theplatform');
+  $output = render($form_signin);
 
   // If we have signin, display account list.
   if (media_theplatform_mpx_variable_get('token')) {
@@ -21,9 +21,10 @@ function media_theplatform_mpx_page_account() {
     $import_account = media_theplatform_mpx_variable_get('import_account');
     // If current account doesn't exist, error msg.
     if ($import_account && !array_key_exists($import_account, $account_list)) {
-      $output .= '<div class="message error">' . t('The current Import Account (:name) was not found in thePlatform; it may have been disabled or deleted.  Please select a new Account to use as the Import Account.', array(':name' => rawurldecode($import_account))) . '</div>';
+      $output .= '<div class="message">' . t('The current Import Account (:name) was not found in thePlatform; it may have been disabled or deleted.  Please select a new Account to use as the Import Account.', array(':name' => rawurldecode($import_account))) . '</div>';
     }
-    $output .= render(drupal_get_form('media_theplatform_mpx_form_account_theplatform', $account_list));
+    $form_account = drupal_get_form('media_theplatform_mpx_form_account_theplatform', $account_list);
+    $output .= render($form_account);
   }
   return $output;
 }
@@ -143,24 +144,26 @@ function media_theplatform_mpx_form_account_theplatform_submit($form, &$form_sta
  */
 function media_theplatform_mpx_page_mpx_players() {
   $output = '';
-
+  $form_player_sync = drupal_get_form('media_theplatform_mpx_form_mpx_player_sync');
+  
   // If no players exist in mpx_player table:
   if (media_theplatform_mpx_get_mpx_player_count() == 0) {
     $output .= '<div class="message">' . t('There are no mpx Players imported into the Media Library.') . '</div>';
     // Display sync player form if user has access.
     if (user_access('sync mpx_player')) {
-      $output .= render(drupal_get_form('media_theplatform_mpx_form_mpx_player_sync'));
+      $output .= render($form_player_sync);
     }
     return $output;
   }
   // Render form: default Player.
   if (user_access('administer mpx_player settings')) {
-    $output = render(drupal_get_form('media_theplatform_mpx_form_mpx_player_settings'));
+    $form_player_settings = drupal_get_form('media_theplatform_mpx_form_mpx_player_settings');
+    $output = render($form_player_settings);
     $sync_access = TRUE;
   }
   // Render form: sync Players.
   if (isset($sync_access) || user_access('sync mpx_player')) {
-    $output .= render(drupal_get_form('media_theplatform_mpx_form_mpx_player_sync'));
+    $output .= render($form_player_sync);
   }
   // List all mpx Players.
   $output .= media_theplatform_mpx_get_table_mpx_players();
@@ -375,19 +378,20 @@ function media_theplatform_mpx_get_mpx_video_forms($settings_access, $sync_acces
   }
   $output = '';
   $default_feed_id = media_theplatform_mpx_variable_get('feed');
-  $settings_expanded = FALSE;
   // If the current Feed id is not in the Feed results, warning msg.
   if ($default_feed_id && !array_key_exists($default_feed_id, $feeds)) {
     $bad_feed = TRUE;
-    $output .= '<div class="message error">' . (t('The current Import Feed (Public ID = :name) was not found in thePlatform; it may have been disabled or deleted.', array(':name' => $default_feed_id))) . '</div>';
+    $output .= '<div class="message">' . (t('The current Import Feed (Public ID = :name) was not found in thePlatform; it may have been disabled or deleted.', array(':name' => $default_feed_id))) . '</div>';
   }
   // If settings access, display mpx_video settings form.
   if ($settings_access) {
-    $output .= render(drupal_get_form('media_theplatform_mpx_form_mpx_video_settings', $feeds));
+    $form_video_settings = drupal_get_form('media_theplatform_mpx_form_mpx_video_settings', $feeds);
+    $output .= render($form_video_settings);
   }
   // If access and ok feed, display mpx_video sync form.
   if ($default_feed_id && ($settings_access || $sync_access) && !isset($bad_feed)) {
-    $output .= render(drupal_get_form('media_theplatform_mpx_form_mpx_video_sync'));
+    $form_video_sync = drupal_get_form('media_theplatform_mpx_form_mpx_video_sync');
+    $output .= render($form_video_sync);
   }
   return $output;
 }
@@ -403,7 +407,8 @@ function media_theplatform_mpx_get_mpx_video_forms($settings_access, $sync_acces
  * @ingroup forms
  */
 function media_theplatform_mpx_form_mpx_video_settings($form, &$form_state, $feeds) {
-  if (media_theplatform_mpx_variable_get('feed')) {
+  $default_feed_id = media_theplatform_mpx_variable_get('feed');
+  if ($default_feed_id && array_key_exists($default_feed_id, $feeds)) {
     $collapsed = TRUE;
   }
   else {
