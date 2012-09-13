@@ -351,10 +351,6 @@ function media_theplatform_mpx_extract_all_js_links($text) {
   $pattern = '/\<script type\=\"text\/javascript\" src\=\"(.*?)\"/';
   preg_match_all($pattern, $text, $results);
   $js_files = $results[1];
-  // Don't return main mpx JS file, it's already included in init().
-  if (($key = array_search(MPX_JS_FILE, $js_files)) !== FALSE) {
-    unset($js_files[$key]);
-  }
   return $js_files;
 }
 
