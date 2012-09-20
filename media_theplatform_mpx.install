@@ -57,6 +57,13 @@ function media_theplatform_mpx_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'account' => array(
+        'description' => 'Account in thePlatform',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
       'head_html' => array(
         'type' => 'blob',
         'description' => 'HTML in the <head> tag',
@@ -122,17 +129,18 @@ function media_theplatform_mpx_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'account' => array(
+        'description' => 'Account in thePlatform',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
       'thumbnail_url' => array(
         'type' => 'varchar',
         'length' => '255',
         'not null' => TRUE,
         'description' => 'thumbnail URL',
-      ),
-      'file_url' => array(
-        'type' => 'varchar',
-        'length' => '255',
-        'not null' => TRUE,
-        'description' => 'File URL',
       ),
       'created' => array(
         'description' => 'timestamp of created',
@@ -192,7 +200,7 @@ function media_theplatform_mpx_schema() {
       ),
       'details' => array(
         'type' => 'varchar',
-        'length' => 255,        
+        'length' => 255,
         'description' => 'Action details',
       ),
       'timestamp' => array(

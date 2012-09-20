@@ -21,7 +21,7 @@ function media_theplatform_mpx_preprocess_media_theplatform_mpx_video(&$variable
   }
   if ($parts['mpx_type'] == 'video') {
     // Retrieve default Player.
-    $player = media_theplatform_mpx_get_mpx_player_by_fid(media_theplatform_mpx_variable_get('default_player_fid'));
+    $player = media_theplatform_mpx_get_mpx_player_by_fid($parts['player_fid']);
     if (!$player) {
       $variables['mpx_id'] = NULL;
       $variables['player_html'] = t("A Default mpx Player must be selected to view this content.");

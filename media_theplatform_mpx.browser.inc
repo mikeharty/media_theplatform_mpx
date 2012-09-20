@@ -1,0 +1,184 @@
+<?php
+
+/**
+ * @file
+ * Functions for Media Browser tabs.
+ */
+
+
+/**
+ * Implements hook_media_browser_plugin_info().
+ */
+function media_theplatform_mpx_media_browser_plugin_info() {
+  $plugins = array();
+  if (user_access('administer media')) {
+    $plugins['media_theplatform_mpx_videos'] = array(
+      '#weight' => -10,
+    );
+    $plugins['media_theplatform_mpx_players'] = array(
+      '#weight' => -10,
+    );
+  }
+  return $plugins;
+}
+
+/**
+ * Implements hook_media_browser_plugin_view().
+ */
+function media_theplatform_mpx_media_browser_plugin_view($plugin_name, $params) {
+  $path = drupal_get_path('module', 'media');
+
+  $types = isset($params['types']) ? $params['types'] : array();
+  $multiselect = isset($params['multiselect']) ? $params['multiselect'] : FALSE;
+
+  $redirect = array('media/browser', array('query' => array('render' => 'media-popup')));
+  switch ($plugin_name) {
+    case 'media_theplatform_mpx_videos':
+      $from_web_form = drupal_get_form('media_theplatform_mpx_form_media_browser', 'videos');
+      return array(
+        '#title' => t('mpxMedia'),
+        'form' => array($from_web_form),
+        '#attached' => array(),
+      );
+    break;
+    case 'media_theplatform_mpx_players':
+      $from_web_form = drupal_get_form('media_theplatform_mpx_form_media_browser', 'players');
+      return array(
+        '#title' => t('mpxPlayers'),
+        'form' => array($from_web_form),
+        '#attached' => array(),
+      );
+    break;
+  }
+  return array();
+}
+
+
+/**
+ * Form constructor for mpx Media Browser.
+ *
+ * @param string $mpx_type
+ *   Valid values are 'videos' or 'players'.
+ *
+ * @see media_theplatform_mpx_media_browser_plugin_view()
+ * @ingroup forms
+ */
+function media_theplatform_mpx_form_media_browser($form, &$form_state = array(), $mpx_type = NULL) {
+  // Need this for media_browser_build_media_item.
+  module_load_include('inc', 'media', 'includes/media.browser');
+
+  $form['list']['#prefix'] = '<div id="container"><div id="scrollbox"><ul id="media-browser-library-list" class="media-list-thumbnails ' . $mpx_type . '-browser">';
+  $form['list']['#suffix'] = '</ul><div id="status"></div></div></div>';
+
+  $files = array();
+  if ($mpx_type == 'videos') {
+    $list = media_theplatform_mpx_get_all_mpx_videos();
+    $label = 'mpxMedia';
+    // @todo - check that players exist before rendering players select?
+    $form['player_fid'] = array(
+      '#type' => 'select',
+      '#title' => t('Render with mpxPlayer:'),
+      '#options' => media_theplatform_mpx_get_players_select(),
+      '#default_value' => media_theplatform_mpx_variable_get('default_player_fid'),
+    );
+  }
+  elseif ($mpx_type == 'players') {
+    $list = media_theplatform_mpx_get_all_mpx_players();
+    $label = 'mpxPlayers';
+  }
+  else {
+    return FALSE;
+  }
+  
+  if (count($list) == 0) {
+    $form['no-items'] = array(
+      '#markup' => t('No :type have been imported.', array(':type' => $label)),
+    );
+    return $form;
+  }
+
+  foreach ($list as $item) {
+    $file = file_load($item->fid);
+    media_browser_build_media_item($file);
+    $file->preview = l($file->preview, 'media/browser', array(
+      'html' => TRUE,
+      'attributes' => array(
+        'data-uri' => $file->uri,
+      ),
+      'query' => array('render' => 'media-popup', 'uri' => $file->uri),
+    ));
+    $form['list'][$file->uri] = array(
+      '#markup' => $file->preview,
+      '#prefix' => '<li>',
+      '#suffix' => '</li>',
+    );
+    $files[$file->uri] = $file;
+  }
+  $form['selected_file'] = array(
+    '#type' => 'hidden',
+    '#default_value' => FALSE,
+  );
+  $form['mpx_type'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $mpx_type,
+  );
+  // Add the files to JS so that they are accessible inside the browser.
+  drupal_add_js(array('media' => array('files' => $files)), 'setting');
+  // Add media_theplatform_mpx browser javascript and CSS.
+  drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx') . '/js/media_theplatform_mpx.browser.js');
+  // Standard Media module files.
+  drupal_add_js(drupal_get_path('module', 'media') . '/js/plugins/media.library.js');
+  drupal_add_css(drupal_get_path('module', 'media') . '/js/plugins/media.library.css');
+
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Select'),
+    '#attributes' => array('class' => array('mpx-submit')),
+  );
+  return $form;
+}
+
+/**
+ * Form submission handler for media_theplatform_mpx_form_media_browser().
+ */
+function media_theplatform_mpx_form_media_browser_submit($form, &$form_state) {
+  $mpx_type = $form_state['values']['mpx_type'];
+  $embed_code = $form_state['values']['selected_file'];
+
+  // If its a Player, simply return the fid from file_managed
+  if ($mpx_type == 'players') {
+    $fid = db_query("SELECT fid FROM {file_managed} WHERE uri=:uri", array(':uri' => $embed_code))->fetchField();
+  }
+
+  // Elseif its a video:
+  elseif ($mpx_type == 'videos') {
+
+    // Check if this Video / Player combo exists.
+    $player_fid = $form_state['values']['player_fid'];
+    // The embed_code given is the file saved on the mpx_video record, so we need to split it out to see check for the Player/Combo.
+    $url = parse_url($embed_code);
+    $parts = explode('/', $url['path']);
+    $uri = 'mpx://m/' . $parts[1] . '/p/' . $player_fid;
+    $fid = db_query("SELECT fid FROM {file_managed} WHERE uri=:uri", array(':uri' => $uri))->fetchField();
+
+    // If it doesn't exist, create the file.
+    if (!$fid) {
+      $provider = media_internet_get_provider($uri);
+      $file = $provider->save();
+      $fid = $file->fid;
+      // Update the new file's name.
+      $video = media_theplatform_mpx_get_mpx_video_by_field('guid', $parts[1]);
+      $player = media_theplatform_mpx_get_mpx_player_by_fid($player_fid);
+      media_theplatform_mpx_update_video_filename($fid, $video['title'], $player['title']);
+    }
+
+  }
+
+  // This stops page reload inside the media browser iframe.
+  $form_state['redirect'] = array('media/browser', array(
+    'query' => array(
+      'render' => 'media-popup',
+      'fid' => $fid,
+    )));
+}

@@ -73,10 +73,13 @@ function media_theplatform_mpx_get_runtimes_select() {
 /**
  * Returns array of Player fid's and Titles.
  */
-function media_theplatform_mpx_get_players_select() {
+function media_theplatform_mpx_get_players_select($account = NULL) {
   // Retrieve players from mpx_player.
   $query = db_select('mpx_player', 'p')
     ->fields('p', array('fid', 'title'));
+  if ($account) {
+    $query = $query->condition('account', $account, '=');
+  }
   $result = $query->execute();
   $num_rows = $query->countQuery()->execute()->fetchField();
   if ($num_rows == 0) {
@@ -90,17 +93,11 @@ function media_theplatform_mpx_get_players_select() {
 }
 
 /**
- * Returns TRUE if default Player is set and is a valid record in mpx_player.
+ * Returns TRUE if given Player $fid matches given $account.
  */
-function media_theplatform_mpx_is_valid_default_player(){
-  $default = media_theplatform_mpx_variable_get('default_player_fid');
-  if ($default) {
-    $players = media_theplatform_mpx_get_players_select();
-    if ($players && array_key_exists($default, $players)) {
-      return TRUE;
-    }
-  }
-  return FALSE;
+function media_theplatform_mpx_is_valid_player_for_account($fid, $account) {
+  $player = media_theplatform_mpx_get_mpx_player_by_fid($fid);
+  return ($player['account'] == $account);
 }
 
 /**
@@ -297,6 +294,7 @@ function media_theplatform_mpx_insert_player($player, $fid = NULL) {
       'guid' => $player['guid'],
       'description' => $player['description'],
       'fid' => $fid,
+      'account' => media_theplatform_mpx_variable_get('import_account'),
       'head_html' => media_theplatform_mpx_get_player_html($player['pid'], 'head'),
       'body_html' => media_theplatform_mpx_get_player_html($player['pid'], 'body'),
       'created' => $timestamp,

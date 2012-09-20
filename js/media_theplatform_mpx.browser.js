@@ -32,11 +32,19 @@
         var files = new Array();
         files.push(file);
         Drupal.media.browser.selectMedia(files);
-        $("input[name='submitted-video']").val(uri);
+        $("input[name='selected_file']").val(uri);
       });
-
+      
+      // Update hidden value for mpx type.
+      $('.players-browser .media-item').bind('click', function () {
+        $("input[name='mpx_type']").val('players');
+      });  
+      $('.videos-browser .media-item').bind('click', function () {
+        $("input[name='mpx_type']").val('videos');
+      });
+      
       $('.mpx-submit').bind('click', function () {
-        if ($("input[name='submitted-video']").val() == '') {
+        if ($("input[name='selected_file']").val() == '') {
           alert(Drupal.t('Please select an item.'));
           return false;
         }

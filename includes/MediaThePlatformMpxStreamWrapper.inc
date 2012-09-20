@@ -4,8 +4,8 @@
  * Contains MediaThePlatformMpxStreamWrapper.
  *
  * Create an instance like this:
- * $mpx_player = new MediaThePlatformMpxStreamWrapper('mpx://p/[pid]);
- * $mpx_video = new MediaThePlatformMpxStreamWrapper('mpx://m/[guid]);
+ * $mpx_player = new MediaThePlatformMpxStreamWrapper('mpx://p/[id]);
+ * $mpx_video = new MediaThePlatformMpxStreamWrapper('mpx://m/[guid]/p/[fid]);
  */
 
 class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
@@ -29,12 +29,8 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
       $params['mpx_type'] = 'video';
       // Use mpxMedia's Guid as the mpx_id for output HTML.
       $params['mpx_id'] = $parts[1];
-      $default_player = media_theplatform_mpx_get_mpx_player_by_fid(media_theplatform_mpx_variable_get('default_player_fid'));
-      $params['player_pid'] = $default_player['pid'];
-      if ($file) {
-        $this_video = media_theplatform_mpx_get_mpx_video_by_fid($file->fid);
-        $params['video_file_url'] = $this_video['file_url'];
-      }
+      // The fid of mpxPlayer to render this mpxMedia with.
+      $params['player_fid'] = $parts[3];
     }
 
     // Elseif mpxPlayer:
@@ -44,11 +40,9 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
         $this_player = media_theplatform_mpx_get_mpx_player_by_fid($file->fid);
         $params['player_pid'] = $this_player['pid'];
         // Use mpxMedia's Pid as the mpx_id for output HTML.
-        $params['mpx_id'] = $this_player['pid'];        
+        $params['mpx_id'] = $this_player['pid'];
       }
     }
-    // Get the string after the mpx://m|p/ to use as mpx_id in rendered HTML.
-    // $params['mpx_id'] = $parts[1];
     return $params;
   }
 
@@ -87,12 +81,7 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
 
   function interpolateUrl() {
     if ($params = $this->get_parameters()) {
-      if ($params['mpx_type'] == 'video') {
-        return media_theplatform_mpx_get_player_url($params['player_pid']) . '/embed/select/' . $params['video_file_url'];
-      }
-      else {
-        return media_theplatform_mpx_get_player_url($params['player_pid']);
-      }
+      return 'mpx://' . $params['mpx_id'];
     }
   }
 

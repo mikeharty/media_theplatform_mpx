@@ -81,14 +81,13 @@ function media_theplatform_mpx_get_feed_videos() {
         return "no thumbnails";
       }
       $thumbnail_url = media_theplatform_mpx_parse_thumbnail_url($video['media$thumbnails']);
-      $file_url = media_theplatform_mpx_parse_file_url($video['media$content']);
+      //$file_url = media_theplatform_mpx_parse_file_url($video['media$content']);
     }
     $videos[] = array(
       'guid' => $video['guid'],
       'title' => $video['title'],
       'description' => $video['description'],
       'thumbnail_url' => $thumbnail_url,
-      'file_url' => $file_url,
     );
   }
   $log = array(
@@ -109,26 +108,6 @@ function media_theplatform_mpx_parse_thumbnail_url($data) {
   foreach ($data as $record) {
     if ($record['plfile$isDefault']) {
       return $record['plfile$url'];
-    }
-  }
-}
-
-/**
- * Returns ID for using in an embed/select URL in interpolateURL.
- */
-function media_theplatform_mpx_parse_file_url($data) {
-  foreach ($data as $record) {
-    // For now, just return the ID of 1st video we find.
-    if ($record['plfile$contentType'] == 'video') {
-      // The file$url looks like this:
-      // http://link.theplatform.com/s/nP1VGC/AAJWDo8rpF2S?feed=Feed%201.
-      // We just want the 'AAJWDo8rpF2S; part.
-      $prefix = 'http://link.theplatform.com/s/' . media_theplatform_mpx_get_account_pid() . '/';
-      // Remove the $prefix.
-      $url = substr($record['plfile$url'], strlen($prefix));
-      // Remove everything at the end starting with ?.
-      $url = strstr($url, '?', TRUE);
-      return $url;
     }
   }
 }
@@ -252,27 +231,31 @@ function media_theplatform_mpx_import_all_videos($type) {
  *   Returns output of media_theplatform_mpx_update_video() or media_theplatform_mpx_insert_video()
  */
 function media_theplatform_mpx_import_video($video) {
-  // Check if fid exists in files table for URI = mpx://m/GUID.
+  // Check if fid exists in files table for URI = mpx://m/GUID/*.
   $guid = $video['guid'];
-  $uri = 'mpx://m/' . $guid;
+  $files = media_theplatform_mpx_get_files_by_guid($guid);
+  
+  /*
+  $player_id = media_theplatform_mpx_variable_get('default_player_fid');
+  $uri = 'mpx://m/' . $guid . '/p/' . $player_id;
   $fid = db_query("SELECT fid FROM {file_managed} WHERE uri=:uri", array(':uri' => $uri))->fetchField();
+  */
 
-  // If fid exists:
-  if ($fid) {
+  // If a file exists:
+  if ($files) {
     // Check if record already exists in mpx_video.
-    $imported = db_query("SELECT fid FROM {mpx_video} WHERE guid=:guid", array(':guid' => $guid))->fetchField();
+    $imported = db_query("SELECT video_id FROM {mpx_video} WHERE guid=:guid", array(':guid' => $guid))->fetchField();
     // If mpx_video record exists, then update record.
     if ($imported) {
-      return media_theplatform_mpx_update_video($video, $fid);
+      return media_theplatform_mpx_update_video($video);
     }
     // Else insert new mpx_video record with existing $fid.
     else {
-      return media_theplatform_mpx_insert_video($video, $fid);
+      return media_theplatform_mpx_insert_video($video, $files[0]->fid);
     }
   }
-  // Else fid doesn't exist:
+  // Else insert new file/record:
   else {
-    // Create new mpx_video record and create new file.
     return media_theplatform_mpx_insert_video($video, NULL);
   }
 }
@@ -291,12 +274,13 @@ function media_theplatform_mpx_import_video($video) {
  */
 function media_theplatform_mpx_insert_video($video, $fid = NULL) {
   $timestamp = REQUEST_TIME;
-
+  $player_id = media_theplatform_mpx_variable_get('default_player_fid');
+  
   // If file doesn't exist, write it to file_managed.
   if (!$fid) {
     // Build embed string to create file:
     // "m" is for media.
-    $embed_code = 'mpx://m/' . $video['guid'];
+    $embed_code = 'mpx://m/' . $video['guid'] . '/p/' . $player_id;
     // Create the file.
     $provider = media_internet_get_provider($embed_code);
     $file = $provider->save();
@@ -306,7 +290,7 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL) {
   else {
     $details = 'existing fid = ' . $fid;
   }
-
+  
   // Insert record into mpx_video.
   $video_id = db_insert('mpx_video')
     ->fields(array(
@@ -314,21 +298,16 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL) {
       'guid' => $video['guid'],
       'description' => $video['description'],
       'fid' => $fid,
+      'account' => media_theplatform_mpx_variable_get('import_account'),
       'thumbnail_url' => $video['thumbnail_url'],
-      'file_url' => $video['file_url'],
       'created' => $timestamp,
       'updated' => $timestamp,
       'status' => 1,
     ))
     ->execute();
-
-  // Update file_managed filename with title of video.
-  $file_title = db_update('file_managed')
-    ->fields(array(
-      'filename' => $video['title'],
-    ))
-    ->condition('fid', $fid, '=')
-    ->execute();
+  // Load default Player for appending to Filename
+  $player = media_theplatform_mpx_get_mpx_player_by_fid($player_id);
+  media_theplatform_mpx_update_video_filename($fid, $video['title'], $player['title']);
 
   // Write mpx_log record.
   global $user;
@@ -346,25 +325,32 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL) {
 }
 
 /**
+ * Updates File $fid with given $video_title and $player_title.
+ */
+function media_theplatform_mpx_update_video_filename($fid, $video_title, $player_title) {
+  // Update file_managed filename with title of video.
+  $file_title = db_update('file_managed')
+    ->fields(array(
+      'filename' => $video_title . ' - ' . $player_title,
+    ))
+    ->condition('fid', $fid, '=')
+    ->execute();  
+}
+
+/**
  * Updates given Video and File in Media Library.
  *
  * @param array $video
  *   Record of Video data requested from thePlatform Import Feed
- * @param int $fid
- *   File fid of Player's File in file_managed
  *
  * @return String
  *   Returns 'update' for counters in media_theplatform_mpx_import_all_players()
  */
-function media_theplatform_mpx_update_video($video, $fid) {
+function media_theplatform_mpx_update_video($video) {
   $timestamp = REQUEST_TIME;
 
   // Fetch video_id and status from mpx_video table for given $video.
-  $mpx_video = db_select('mpx_video', 'v')
-    ->fields('v', array('video_id', 'status'))
-    ->condition('guid', $video['guid'], '=')
-    ->execute()
-    ->fetchAssoc();
+  $mpx_video = media_theplatform_mpx_get_mpx_video_by_field('guid', $video['guid']);
 
   // If we're performing an update, it means this video is active.
   // Check if the video was inactive and is being re-activated:
@@ -382,20 +368,13 @@ function media_theplatform_mpx_update_video($video, $fid) {
       'guid' => $video['guid'],
       'description' => $video['description'],
       'thumbnail_url' => $video['thumbnail_url'],
-      'file_url' => $video['file_url'],
       'status' => 1,
       'updated' => $timestamp,
     ))
     ->condition('guid', $video['guid'], '=')
     ->execute();
 
-  // Update file_managed filename with title of video.
-  $file_title = db_update('file_managed')
-    ->fields(array(
-      'filename' => $video['title'],
-    ))
-    ->condition('fid', $fid, '=')
-    ->execute();
+  // @todo: (maybe). Update all files with guid with new title if the title is different.
 
   $image_path = 'media-mpx/' . $video['guid'] . '.jpg';
   // Delete thumbnail from files/media-mpx directory.
@@ -431,6 +410,17 @@ function media_theplatform_mpx_get_mpx_video_by_fid($fid) {
 }
 
 /**
+ * Returns associative array of mpx_video data for given $field and its $value.
+ */
+function media_theplatform_mpx_get_mpx_video_by_field($field, $value) {
+  return db_select('mpx_video', 'v')
+    ->fields('v')
+    ->condition($field, $value, '=')
+    ->execute()
+    ->fetchAssoc();
+}
+
+/**
  * Returns total number of records in mpx_video table.
  */
 function media_theplatform_mpx_get_mpx_video_count() {
@@ -444,6 +434,29 @@ function media_theplatform_mpx_get_mpx_video_count() {
 function media_theplatform_mpx_get_all_mpx_videos() {
   return db_select('mpx_video', 'v')
     ->fields('v')
+    ->execute()
+    ->fetchAll();
+}
+
+/**
+ * Returns array of all records in file_managed with mpx://m/$guid/%
+ */
+function media_theplatform_mpx_get_files_by_guid($guid) {
+  return db_select('file_managed', 'f')
+    ->fields('f')
+    ->condition('uri', 'mpx://m/' . $guid . '/%', 'LIKE')
+    ->execute()
+    ->fetchAll();
+}
+
+/**
+ * Returns array of all records in file_managed with mpx://m/%/p/[player_fid]
+ */
+function media_theplatform_mpx_get_files_by_player_fid($fid) {
+  return db_select('file_managed', 'f')
+    ->fields('f')
+    ->condition('uri', 'mpx://m/%', 'LIKE')
+    ->condition('uri', '%/p/' . $fid, 'LIKE')
     ->execute()
     ->fetchAll();
 }

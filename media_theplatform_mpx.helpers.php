@@ -56,25 +56,7 @@ function media_theplatform_mpx_signin($username, $pass) {
  * Returns string of thePlatform account pid.
  */
 function media_theplatform_mpx_get_account_pid() {
-  // Check for the signIn token.
-  $mpx_token = media_theplatform_mpx_variable_get('token');
-  if (!$mpx_token) {
-    return t('There was an error with your request.');
-  }
-  // See if we have pid stored as a variable already.
-  $mpx_account_pid = media_theplatform_mpx_variable_get('account_pid');
-  if ($mpx_account_pid) {
-    return $mpx_account_pid;
-  }
-  // Else query thePlatform to get account pid.
-  else {
-    $feed_url = 'http://mps.theplatform.com/data/Account?schema=1.2.0&pretty=true&form=json&fields=pid&token=' . $mpx_token;
-    $result = drupal_http_request($feed_url);
-    $result_data = drupal_json_decode($result->data);
-    $mpx_account_pid = $result_data['entries'][0]['placcount$pid'];
-    media_theplatform_mpx_variable_set('account_pid', $mpx_account_pid);
-    return $mpx_account_pid;
-  }
+  return media_theplatform_mpx_variable_get('account_pid');
 }
 
 /**
@@ -87,7 +69,7 @@ function media_theplatform_mpx_get_accounts_select() {
     return t('There was an error with your request.');
   }
   // Get the list of accounts from thePlatform.
-  $feed_url = 'http://access.auth.theplatform.com/data/Account?schema=1.3.0&form=json&fields=id,title&byDisabled=false&token=' . $mpx_token;
+  $feed_url = 'http://access.auth.theplatform.com/data/Account?schema=1.3.0&form=json&byDisabled=false&token=' . $mpx_token;
   $result = drupal_http_request($feed_url);
   $result_data = drupal_json_decode($result->data);
 
@@ -105,9 +87,12 @@ function media_theplatform_mpx_get_accounts_select() {
     return FALSE;
   }
   $accounts = array();
+  $accounts_data = array();
+
   foreach ($result_data['entries'] as $entry) {
     $title = $entry['title'];
-    $accounts[rawurlencode($title)] = $title;
+    $key = rawurlencode($title);
+    $accounts[$key] = $title;
   }
   $log = array(
     'uid' => $user->uid,
