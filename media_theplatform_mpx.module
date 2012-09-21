@@ -25,19 +25,23 @@ include_once ('media_theplatform_mpx.video.php');
  */
 function media_theplatform_mpx_page_alter(&$page) {
   //print '<pre>' . print_r($page, true) . '</pre>';
+  //array_walk_recursive($page, 'media_theplatform_mpx_extractor');
   
   // Module pages break, with infinite loops.
   $module_page = isset($page['content']['system_main']['module']);
+  // Node module pages break too.
+  $node_page = isset($page['content']['system_main']['#node_edit_form']) || isset($page['content']['system_main']['#node_type']);
+  // Oh yeah, File pages too.
+  $file_page = isset($page['content']['system_main']['#file_type']);
+  // People break things too.
+  $people_page = isset($page['content']['system_main']['anonymous_settings']);
   
-  // Node form has infinite loop, so dont call it here
-  if (!isset($page['content']['system_main']['#node_edit_form']) && !$module_page) {
+  // Only call on pages that won't break.
+  if (!$node_page && !$module_page && !$file_page && !$people_page) {
     array_walk_recursive($page, 'media_theplatform_mpx_extractor');
   }
-  /*
-  elseif ($module_page) {
-    print '<pre>module page</pre>';
-  }
-  */
+  
+
 }
 
 function media_theplatform_mpx_extractor($item, $key) {
@@ -47,7 +51,7 @@ function media_theplatform_mpx_extractor($item, $key) {
   }
   $files = array();
   // Check strings for embedded media markup:
-  if ($key == 'value') {
+  if ($key == 'value' && is_string($item)) {
     $files = media_theplatform_mpx_extract_fids($item);
   }
   // Else check if this is a file object:
@@ -59,7 +63,7 @@ function media_theplatform_mpx_extractor($item, $key) {
     foreach ($files as $fid) {
       $file = file_load($fid);
       // If its a mpx file, get player data and add it into Drupal <head>.
-      if ($file->filemime == 'video/mpx') {
+      if ($file && $file->filemime == 'video/mpx') {
         $wrapper = file_stream_wrapper_get_instance_by_uri($file->uri);
         $parts = $wrapper->get_parameters();  
       
