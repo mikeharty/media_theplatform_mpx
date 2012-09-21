@@ -188,17 +188,8 @@ function media_theplatform_mpx_form_cron_settings() {
     '#title' => t('Sync mpxPlayers on Cron'),
     '#default_value' => media_theplatform_mpx_variable_get('cron_players'),
   );  
-  $form['player_settings'][media_theplatform_mpx_NAMESPACE . 'runtimes'] = array(
-    '#type' => 'select',
-    '#title' => t('Select Site-wide Runtimes:'),
-    '#description' => t('Select how all mpxPlayers should be rendered.'),
-    '#options' => media_theplatform_mpx_get_runtimes_select(),
-    '#required' => TRUE,
-    '#default_value' => media_theplatform_mpx_variable_get('runtimes'),
-  );
   return system_settings_form($form);
 }
-
 
 
 /******************* mpxPlayers *****************************/
@@ -307,8 +298,6 @@ function media_theplatform_mpx_get_table_mpx_players() {
   }
   return theme('table', array('header' => $header, 'rows' => $rows));
 }
-
-
 
 
 /******************** mpxMedia *******************************/

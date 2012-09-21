@@ -74,13 +74,14 @@ function media_theplatform_mpx_form_media_browser($form, &$form_state = array(),
   if ($mpx_type == 'videos') {
     $list = media_theplatform_mpx_get_all_mpx_videos();
     $label = 'mpxMedia';
-    // @todo - check that players exist before rendering players select?
-    $form['player_fid'] = array(
-      '#type' => 'select',
-      '#title' => t('Render with mpxPlayer:'),
-      '#options' => media_theplatform_mpx_get_players_select(),
-      '#default_value' => media_theplatform_mpx_variable_get('default_player_fid'),
-    );
+    if (count($list) > 0) {
+      $form['player_fid'] = array(
+        '#type' => 'select',
+        '#title' => t('Render with mpxPlayer:'),
+        '#options' => media_theplatform_mpx_get_players_select(),
+        '#default_value' => media_theplatform_mpx_variable_get('default_player_fid'),
+      );
+    }
   }
   elseif ($mpx_type == 'players') {
     $list = media_theplatform_mpx_get_all_mpx_players();
@@ -89,7 +90,7 @@ function media_theplatform_mpx_form_media_browser($form, &$form_state = array(),
   else {
     return FALSE;
   }
-  
+
   if (count($list) == 0) {
     $form['no-items'] = array(
       '#markup' => t('No :type have been imported.', array(':type' => $label)),

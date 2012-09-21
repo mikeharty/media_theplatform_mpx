@@ -72,6 +72,10 @@ function media_theplatform_mpx_schema() {
         'type' => 'blob',
         'description' => 'HTML in the <head> tag',
       ),
+      'player_data' => array(
+        'type' => 'blob',
+        'description' => 'Serialized array of player data',
+      ),      
       'created' => array(
         'description' => 'timestamp of created',
         'type' => 'int',

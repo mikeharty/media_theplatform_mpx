@@ -61,16 +61,6 @@ function media_theplatform_mpx_get_players_from_theplatform() {
 }
 
 /**
- * Returns array of options for the runtimes variable.
- */
-function media_theplatform_mpx_get_runtimes_select() {
-  return array(
-    'Flash,HTML5' => 'Flash,HTML5',
-    'HTML5,Flash' => 'HTML5,Flash',
-  );
-}
-
-/**
  * Returns array of Player fid's and Titles.
  */
 function media_theplatform_mpx_get_players_select($account = NULL) {
@@ -297,6 +287,7 @@ function media_theplatform_mpx_insert_player($player, $fid = NULL) {
       'account' => media_theplatform_mpx_variable_get('import_account'),
       'head_html' => media_theplatform_mpx_get_player_html($player['pid'], 'head'),
       'body_html' => media_theplatform_mpx_get_player_html($player['pid'], 'body'),
+      'player_data' => serialize(media_theplatform_mpx_extract_mpx_player_data($player['pid'])),
       'created' => $timestamp,
       'updated' => $timestamp,
       'status' => 1,
@@ -365,6 +356,7 @@ function media_theplatform_mpx_update_player($player, $fid) {
       'description' => $player['description'],
       'head_html' => media_theplatform_mpx_get_player_html($player['pid'], 'head'),
       'body_html' => media_theplatform_mpx_get_player_html($player['pid'], 'body'),
+      'player_data' => serialize(media_theplatform_mpx_extract_mpx_player_data($player['pid'])),
       'status' => 1,
       'updated' => $timestamp,
     ))
@@ -429,7 +421,7 @@ function media_theplatform_mpx_get_all_mpx_players() {
  *   HTML from the Player's <HEAD>
  *
  * @return String
- *   Returns all CSS (does not include <style> tags)
+ *   Returns all CSS (does not include a surrounding <style> wrapper)
  */
 function media_theplatform_mpx_get_mpx_player_css($head) {
   // Get inline CSS from all <style> tags (there can be multiple).
@@ -444,50 +436,41 @@ function media_theplatform_mpx_get_mpx_player_css($head) {
 }
 
 /**
- * Returns JS HTML extracted from given Head HTML of a Player.
+ * Returns array of CSS and JS data extracted from given Head HTML of a Player.
  *
- * @param string $head
- *   HTML from the Player's <HEAD>
+ * @param string $pid
+ *   The Player's Public ID
  *
- * @return String
- *   Returns inline JS in <script></script> tags if the Player has inline JS
- *   Also external links to JS if the Player has external JS
+ * @return Array
+ *   Contains CSS classes/code, inline JS, and external JS file URLs
  */
-function media_theplatform_mpx_get_mpx_player_js($head) {
-  $output = '';
-  $inline = media_theplatform_mpx_extract_all_js_inline($head);
-  if ($inline) {
-    foreach ($inline as $script) {
-      $output .= '<script type="text/javascript">' . $script . '</script>' . "\n";
-    }
-  }
+function media_theplatform_mpx_extract_mpx_player_data($pid) {
+  $player_data = array();
+  $url = media_theplatform_mpx_get_player_url($pid) . '/head';
+  $result = drupal_http_request($url);
+  $head = $result->data;
+
+  // Player meta tags.
+  $player_data['meta'] = get_meta_tags($url);
+  // Player CSS.
+  $player_data['css'] = media_theplatform_mpx_get_mpx_player_css($head);
+  // External JS files.
   $js_files = media_theplatform_mpx_extract_all_js_links($head);
   if ($js_files) {
     foreach ($js_files as $src) {
-      $output .= '<script type="text/javascript" src="' . $src . '"></script>' . "\n";
+      $player_data['js']['external'][] = $src;
+    }
+  } 
+  // Add any inline JS.
+  $inline = media_theplatform_mpx_extract_all_js_inline($head);
+  if ($inline) {
+    foreach ($inline as $script) {
+      $player_data['js']['inline'][] = $script;
     }
   }
-  return $output;
+  return $player_data;
 }
 
-/**
- * Returns HTML to be used when rendering a mpx Media File.
- *
- * @param string $mpx_id
- *   Unique indentifier for the div id of the mpx Media object.
- * @param string $css
- *   Inline CSS to be placed within <style> tags.
- * @param string $body
- *   HTML for the actual Player.
- *
- * @return String
- *   Renders all components to be placed within a media-mpx-wrapper
- */
-function media_theplatform_mpx_render_mpx_player($mpx_id, $css, $body) {
-  // Drupal outputs CDATA into the CSS.
-  // See http://drupal.org/node/672954#comment-3460304.
-  $output = '';
-  $output .= '<style type="text/css">' . $css . '</style>';
-  $output .= '<div id="mpx-' . $mpx_id . '">' . $body . '</div>';
-  return $output;
+function media_theplatform_mpx_get_player_data($player) {
+  return unserialize($player['player_data']);
 }

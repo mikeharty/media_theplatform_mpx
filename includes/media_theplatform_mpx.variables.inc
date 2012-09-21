@@ -73,7 +73,6 @@ function media_theplatform_mpx_variable_default($name = NULL) {
       'feed' => NULL,
       'import_account' => NULL,
       'password' => NULL,
-      'runtimes' => 'Flash,HTML5',
       'token' => NULL,
       'username' => NULL,
     );

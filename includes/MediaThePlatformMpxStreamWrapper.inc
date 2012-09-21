@@ -36,6 +36,8 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
     // Elseif mpxPlayer:
     elseif ($url['host'] == 'p') {
       $params['mpx_type'] = 'player';
+      // Store this variable so we can consistently just call player_fid when adding css and js to <head>.
+      $params['player_fid'] = $file->fid;
       if ($file) {
         $this_player = media_theplatform_mpx_get_mpx_player_by_fid($file->fid);
         $params['player_pid'] = $this_player['pid'];

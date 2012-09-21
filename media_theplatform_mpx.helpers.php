@@ -139,7 +139,7 @@ function media_theplatform_mpx_is_file_active($file) {
     return $player['status'];
   }
   elseif ($parts['mpx_type'] == 'video') {
-    $video = media_theplatform_mpx_get_mpx_video_by_fid($file->fid);
+    $video = media_theplatform_mpx_get_mpx_video_by_field('guid', $parts['mpx_id']);
     return $video['status'];
   }
 }
@@ -350,7 +350,7 @@ function media_theplatform_mpx_extract_all_js_inline($text) {
 
 
 /**
- * Returns CSS as string from given $href.
+ * Returns string of CSS by requesting data from given stylesheet $href.
  */
 function media_theplatform_mpx_get_external_css($href) {
 

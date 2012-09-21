@@ -20,6 +20,88 @@ include_once ('media_theplatform_mpx.helpers.php');
 include_once ('media_theplatform_mpx.player.php');
 include_once ('media_theplatform_mpx.video.php');
 
+/** 
+ * Implements hook_page_alter().
+ */
+function media_theplatform_mpx_page_alter(&$page) {
+  //print '<pre>' . print_r($page, true) . '</pre>';
+  
+  // Module pages break, with infinite loops.
+  $module_page = isset($page['content']['system_main']['module']);
+  
+  // Node form has infinite loop, so dont call it here
+  if (!isset($page['content']['system_main']['#node_edit_form']) && !$module_page) {
+    array_walk_recursive($page, 'media_theplatform_mpx_extractor');
+  }
+  /*
+  elseif ($module_page) {
+    print '<pre>module page</pre>';
+  }
+  */
+}
+
+function media_theplatform_mpx_extractor($item, $key) {
+  // This is what seems to break things.
+  if ($key == '#groups') {
+    return;
+  }
+  $files = array();
+  // Check strings for embedded media markup:
+  if ($key == 'value') {
+    $files = media_theplatform_mpx_extract_fids($item);
+  }
+  // Else check if this is a file object:
+  elseif ($key == '#file' && is_object($item) && $item->filemime == 'video/mpx') {
+    $files[] = $item->fid;
+  }
+  // If we found files:
+  if (count($files) > 0) {
+    foreach ($files as $fid) {
+      $file = file_load($fid);
+      // If its a mpx file, get player data and add it into Drupal <head>.
+      if ($file->filemime == 'video/mpx') {
+        $wrapper = file_stream_wrapper_get_instance_by_uri($file->uri);
+        $parts = $wrapper->get_parameters();  
+      
+        // Load the mpx_player data.
+        $player = media_theplatform_mpx_get_mpx_player_by_fid($parts['player_fid']);
+        $player_data = media_theplatform_mpx_get_player_data($player);
+  
+        // Replace css selectors with #mpx_id selectors.
+        $player_css = media_theplatform_mpx_replace_css_ids($player_data['css'], $parts['mpx_id']);
+        // Add mpxPlayer CSS.
+        drupal_add_css($player_css, 'inline');
+  
+        // Add mpxPlayer inline JS.
+        if (isset($player_data['js']['inline'])) {
+          foreach ($player_data['js']['inline'] as $script) {
+            drupal_add_js($script, 'inline');
+          }
+        }
+        // Add mpxPlayer external JS files.
+        if (isset($player_data['js']['external'])) {
+          foreach ($player_data['js']['external'] as $src) {
+            drupal_add_js($src, 'external');
+          }
+        }
+  
+        // Add mpxPlayer meta tags.
+        if (isset($player_data['meta'])) {
+          foreach ($player_data['meta'] as $key => $value) {
+            $element = array(
+              '#tag' => 'meta', 
+              '#attributes' => array(
+                'property' => $key,
+                'content' => $value,
+              ),
+            );
+            drupal_add_html_head($element, $key);
+          }
+        }
+      }
+    }
+  }
+}
 
 /**
  * Implements hook_menu().
@@ -60,16 +142,6 @@ function media_theplatform_mpx_init() {
     'type' => 'file',
     'every_page' => TRUE)
   );
-  // Add thePlatform Player Runtimes to <head>.
-  $preferred_runtimes_meta = array(
-    '#type' => 'html_tag',
-    '#tag' => 'meta',
-    '#attributes' => array(
-      'name' => 'tp:PreferredRuntimes',
-      'content' => media_theplatform_mpx_variable_get('runtimes'),
-    ),
-  );
-  drupal_add_html_head($preferred_runtimes_meta, 'meta_tp_preferred_runtimes');
 }
 
 /**
@@ -275,13 +347,13 @@ function media_theplatform_mpx_permission() {
 function media_theplatform_mpx_form_alter(&$form, &$form_state, $form_id) {
   // Check if it's media: single file delete form OR bulk media delete form.
   $message = FALSE;
-  $media_file_delete_form = $form['#id'] == 'media-admin' && isset($form['operation']) && $form['operation']['#value'] == 'delete';
+  $media_file_delete_form = ($form['#id'] == 'media-admin' && isset($form['operation']) && $form['operation']['#value'] == 'delete');
   if ($form['#id'] == 'media-multiple-delete-confirm' || $media_file_delete_form) {
     foreach ($form['files'] as $fid) {
       if (isset($fid['#value'])) {
         $file = file_load($fid['#value']);
         if ($file->filemime == 'video/mpx' && media_theplatform_mpx_get_files_by_player_fid($file->fid)) {
-          drupal_set_message(t('mpxPlayer cannot be deleted because it is referenced by other mpxMedia Files.'), 'error');
+          drupal_set_message(t('@filename cannot be deleted because it is referenced by other mpxMedia Files.', array('@filename' => $file->filename)), 'error');
           unset($form['actions']['submit']);
           unset($form['description']);
         }

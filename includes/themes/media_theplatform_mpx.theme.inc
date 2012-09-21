@@ -32,14 +32,6 @@ function media_theplatform_mpx_preprocess_media_theplatform_mpx_video(&$variable
   }
   // Add mpx_id's into all of the body HTML.
   $body = media_theplatform_mpx_replace_html_ids($body, $parts['mpx_id']);
-  // Grab css data from the head_html field.
-  $css = media_theplatform_mpx_get_mpx_player_css($player['head_html']);
-  // Replace its selectors.
-  $css = media_theplatform_mpx_replace_css_ids($css, $parts['mpx_id']);
-  // Add inline/external JS.
-  $inline_js = media_theplatform_mpx_get_mpx_player_js($player['head_html']);
-  // Render all css and player body HTML together.
-  $html = media_theplatform_mpx_render_mpx_player($parts['mpx_id'], $css, $body);
-  $variables['player_html'] = $inline_js . $html;
+  $variables['player_html'] = $body;
   $variables['mpx_id'] = $parts['mpx_id'];
 }
