@@ -460,7 +460,7 @@ function media_theplatform_mpx_extract_mpx_player_data($pid) {
     foreach ($js_files as $src) {
       $player_data['js']['external'][] = $src;
     }
-  } 
+  }
   // Add any inline JS.
   $inline = media_theplatform_mpx_extract_all_js_inline($head);
   if ($inline) {
@@ -471,6 +471,9 @@ function media_theplatform_mpx_extract_mpx_player_data($pid) {
   return $player_data;
 }
 
+/**
+ * Returns array of CSS and JS data stored in Player's player_data field.
+ */
 function media_theplatform_mpx_get_player_data($player) {
   return unserialize($player['player_data']);
 }

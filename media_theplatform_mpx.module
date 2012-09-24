@@ -20,38 +20,31 @@ include_once ('media_theplatform_mpx.helpers.php');
 include_once ('media_theplatform_mpx.player.php');
 include_once ('media_theplatform_mpx.video.php');
 
-/** 
- * Implements hook_page_alter().
+/**
+ * Implements hook_page_build().
  */
-function media_theplatform_mpx_page_alter(&$page) {
-  //print '<pre>' . print_r($page, true) . '</pre>';
-  //array_walk_recursive($page, 'media_theplatform_mpx_extractor');
-  
-  // Module pages break, with infinite loops.
-  $module_page = isset($page['content']['system_main']['module']);
-  // Node module pages break too.
-  $node_page = isset($page['content']['system_main']['#node_edit_form']) || isset($page['content']['system_main']['#node_type']);
-  // Oh yeah, File pages too.
-  $file_page = isset($page['content']['system_main']['#file_type']);
-  // People break things too.
-  $people_page = isset($page['content']['system_main']['anonymous_settings']);
-  
-  // Only call on pages that won't break.
-  if (!$node_page && !$module_page && !$file_page && !$people_page) {
-    array_walk_recursive($page, 'media_theplatform_mpx_extractor');
+function media_theplatform_mpx_page_build(&$page) {
+  $page_array_text = print_r($page, TRUE);
+  // Sometimes the page array contains recursion, like on the node edit form.
+  $infinite = strpos($page_array_text, '*RECURSION*');
+  // Only extract file ID's if we're on a page array with no recursion.
+  if ($infinite === FALSE) {
+    array_walk_recursive($page, 'media_theplatform_mpx_add_player_head');
   }
-  
-
 }
 
-function media_theplatform_mpx_extractor($item, $key) {
-  // This is what seems to break things.
-  if ($key == '#groups') {
-    return;
-  }
+/**
+ * Adds mpxPlayer CSS, JS, Meta tags into Drupal <head> if a mpxPlayer or mpxMedia File is present.
+ *
+ * @param $item
+ *   The value of the array element.  Could be a String, Array, or anything.
+ * @param String $key
+ *   The key of the array element.
+ */
+function media_theplatform_mpx_add_player_head($item, $key) {
   $files = array();
-  // Check strings for embedded media markup:
-  if ($key == 'value' && is_string($item)) {
+  // Check $item for embedded media markup:
+  if ($key == 'value' && is_string($item) && $item != '') {
     $files = media_theplatform_mpx_extract_fids($item);
   }
   // Else check if this is a file object:
@@ -65,17 +58,17 @@ function media_theplatform_mpx_extractor($item, $key) {
       // If its a mpx file, get player data and add it into Drupal <head>.
       if ($file && $file->filemime == 'video/mpx') {
         $wrapper = file_stream_wrapper_get_instance_by_uri($file->uri);
-        $parts = $wrapper->get_parameters();  
-      
+        $parts = $wrapper->get_parameters();
+
         // Load the mpx_player data.
         $player = media_theplatform_mpx_get_mpx_player_by_fid($parts['player_fid']);
         $player_data = media_theplatform_mpx_get_player_data($player);
-  
+
         // Replace css selectors with #mpx_id selectors.
         $player_css = media_theplatform_mpx_replace_css_ids($player_data['css'], $parts['mpx_id']);
         // Add mpxPlayer CSS.
         drupal_add_css($player_css, 'inline');
-  
+
         // Add mpxPlayer inline JS.
         if (isset($player_data['js']['inline'])) {
           foreach ($player_data['js']['inline'] as $script) {
@@ -88,12 +81,12 @@ function media_theplatform_mpx_extractor($item, $key) {
             drupal_add_js($src, 'external');
           }
         }
-  
+
         // Add mpxPlayer meta tags.
         if (isset($player_data['meta'])) {
           foreach ($player_data['meta'] as $key => $value) {
             $element = array(
-              '#tag' => 'meta', 
+              '#tag' => 'meta',
               '#attributes' => array(
                 'property' => $key,
                 'content' => $value,

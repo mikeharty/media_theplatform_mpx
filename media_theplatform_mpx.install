@@ -75,7 +75,7 @@ function media_theplatform_mpx_schema() {
       'player_data' => array(
         'type' => 'blob',
         'description' => 'Serialized array of player data',
-      ),      
+      ),
       'created' => array(
         'description' => 'timestamp of created',
         'type' => 'int',

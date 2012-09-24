@@ -182,12 +182,12 @@ function media_theplatform_mpx_form_cron_settings() {
     '#type' => 'checkbox',
     '#title' => t('Sync mpxMedia on Cron'),
     '#default_value' => media_theplatform_mpx_variable_get('cron_videos'),
-  ); 
+  );
   $form['cron'][media_theplatform_mpx_NAMESPACE . 'cron_players'] = array(
     '#type' => 'checkbox',
     '#title' => t('Sync mpxPlayers on Cron'),
     '#default_value' => media_theplatform_mpx_variable_get('cron_players'),
-  );  
+  );
   return system_settings_form($form);
 }
 
