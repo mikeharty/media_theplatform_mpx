@@ -75,12 +75,19 @@ function media_theplatform_mpx_form_media_browser($form, &$form_state = array(),
     $list = media_theplatform_mpx_get_all_mpx_videos();
     $label = 'mpxMedia';
     if (count($list) > 0) {
-      $form['player_fid'] = array(
-        '#type' => 'select',
-        '#title' => t('Render with mpxPlayer:'),
-        '#options' => media_theplatform_mpx_get_players_select(),
-        '#default_value' => media_theplatform_mpx_variable_get('default_player_fid'),
-      );
+      // Fetch all distinct accounts from mpx_player.
+      $accounts = media_theplatform_mpx_get_mpx_player_accounts();
+      foreach ($accounts as $account) {
+        $account_label = str_replace('%', '-', $account->account);
+        $form['player_fid_' . $account_label] = array(
+          '#type' => 'select',
+          '#title' => t('Render with mpxPlayer:'),
+          '#options' => media_theplatform_mpx_get_players_select($account->account),
+          '#default_value' => media_theplatform_mpx_variable_get('default_player_fid'),
+          '#prefix' => '<div class="mpxplayer_select ' . $account_label . '">',
+          '#suffix' => '</div>',
+        );
+      }
     }
   }
   elseif ($mpx_type == 'players') {
@@ -100,8 +107,9 @@ function media_theplatform_mpx_form_media_browser($form, &$form_state = array(),
 
   foreach ($list as $item) {
     $file = file_load($item->fid);
+    $account_label = str_replace('%', '-', $item->account);
     media_browser_build_media_item($file);
-    $file->preview = l($file->preview, 'media/browser', array(
+    $file->preview = l('<span class="' . $account_label . '">' . $file->preview . '</span>', 'media/browser', array(
       'html' => TRUE,
       'attributes' => array(
         'data-uri' => $file->uri,
@@ -155,21 +163,25 @@ function media_theplatform_mpx_form_media_browser_submit($form, &$form_state) {
   // Elseif its a video:
   elseif ($mpx_type == 'videos') {
 
-    // Check if this Video / Player combo exists.
-    $player_fid = $form_state['values']['player_fid'];
     // The embed_code given is the file saved on the mpx_video record, so we need to split it out to see check for the Player/Combo.
     $url = parse_url($embed_code);
     $parts = explode('/', $url['path']);
+    $video = media_theplatform_mpx_get_mpx_video_by_field('guid', $parts[1]);
+    $account_label = str_replace('%', '-', $video['account']);
+    
+    // Check if this Video / Player combo exists.
+    $key = 'player_fid_' . $account_label;
+    watchdog('media_theplatform_mpx', $key);
+    $player_fid = $form_state['values'][$key];
     $uri = 'mpx://m/' . $parts[1] . '/p/' . $player_fid;
     $fid = db_query("SELECT fid FROM {file_managed} WHERE uri=:uri", array(':uri' => $uri))->fetchField();
-
+    
     // If it doesn't exist, create the file.
     if (!$fid) {
       $provider = media_internet_get_provider($uri);
       $file = $provider->save();
       $fid = $file->fid;
       // Update the new file's name.
-      $video = media_theplatform_mpx_get_mpx_video_by_field('guid', $parts[1]);
       $player = media_theplatform_mpx_get_mpx_player_by_fid($player_fid);
       media_theplatform_mpx_update_video_filename($fid, $video['title'], $player['title']);
     }

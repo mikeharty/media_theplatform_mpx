@@ -9,6 +9,8 @@
 
   Drupal.behaviors.mediaMpxBrowser = {
     attach: function (context, settings) {
+    
+      $('div.mpxplayer_select').hide();
 
       // Container for the files that get passed back to the browser
       var files = {};
@@ -17,7 +19,23 @@
       $('ul#media-browser-library-list a').click(function() {
         return false;
       });
-
+        
+      // Update hidden value for mpx type.
+      $('.players-browser .media-item').bind('click', function () {
+        $("input[name='mpx_type']").val('players');
+        // Hide player selects on video-browser if we clicked on a Player item.
+        $('div.mpxplayer_select').hide();
+      });  
+      
+      $('.videos-browser .media-item').bind('click', function () {
+        $("input[name='mpx_type']").val('videos');
+        // Hide all player selects.
+        $('div.mpxplayer_select').hide();
+        // Display player select for this Video's account.
+        account = $(this).closest('span').attr('class');
+        $('div.'+account).show();
+      });
+      
       // Catch the click on a media item
       $('.media-item').bind('click', function () {
         // Remove all currently selected files
@@ -25,7 +43,7 @@
         // Set the current item to active
         $(this).addClass('selected');
         // Add this FID to the array of selected files
-        var uri = $(this).parent('a[data-uri]').attr('data-uri');
+        var uri = $(this).parent().parent('a[data-uri]').attr('data-uri');
         // Get the file from the settings which was stored in
         // template_preprocess_media_views_view_media_browser()
         var file = Drupal.settings.media.files[uri];
@@ -34,15 +52,8 @@
         Drupal.media.browser.selectMedia(files);
         $("input[name='selected_file']").val(uri);
       });
-      
-      // Update hidden value for mpx type.
-      $('.players-browser .media-item').bind('click', function () {
-        $("input[name='mpx_type']").val('players');
-      });  
-      $('.videos-browser .media-item').bind('click', function () {
-        $("input[name='mpx_type']").val('videos');
-      });
-      
+            
+      // Check that file was selected.
       $('.mpx-submit').bind('click', function () {
         if ($("input[name='selected_file']").val() == '') {
           alert(Drupal.t('Please select an item.'));

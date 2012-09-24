@@ -110,7 +110,7 @@ function media_theplatform_mpx_form_account_theplatform($form, &$form_state, $ac
     '#required' => TRUE,
     '#empty_option' => t('- Select -'),
     '#default_value' => media_theplatform_mpx_variable_get('import_account'),
-    '#description' => t('Set the account from which to import Players and Feeds from.'),
+    '#description' => t('Set the account from which to import mpxPlayers and Feeds from.'),
   );
   $form['accounts']['actions'] = array('#type' => 'actions');
   $form['accounts']['actions']['submit'] = array(
@@ -147,7 +147,7 @@ function media_theplatform_mpx_form_account_theplatform_submit($form, &$form_sta
 
   // Import all players for this account.
   $import = media_theplatform_mpx_import_all_players('manual');
-  drupal_set_message(t('Import account set.') . ' ' . l(t('All Players imported from the Import account.'), MPX_PATH_PLAYER));
+  drupal_set_message(t('Import account set.') . ' ' . l(t('All mpxPlayers imported from the Import account.'), MPX_PATH_PLAYER));
 }
 
 /**
@@ -244,10 +244,10 @@ function media_theplatform_mpx_form_mpx_player_sync_submit($form, &$form_state) 
     drupal_set_message(t('No mpxPlayers were found for your account on thePlatform.  Please create at least 1 mpxPlayer in thePlatform and then click Sync mpxPlayers Now.'), 'error');
   }
   else {
-    drupal_set_message(t(':num mpx Players returned:', array(':num' => $import['total'])));
-    drupal_set_message(t(':num new mpx Players created.', array(':num' => $import['inserts'])));
-    drupal_set_message(t(':num existing mpx Players updated.', array(':num' => $import['updates'])));
-    drupal_set_message(t(':num existing mpx Players inactivated.', array(':num' => $import['inactives'])));
+    drupal_set_message(t(':num mpxPlayers returned:', array(':num' => $import['total'])));
+    drupal_set_message(t(':num new mpxPlayers created.', array(':num' => $import['inserts'])));
+    drupal_set_message(t(':num existing mpxPlayers updated.', array(':num' => $import['updates'])));
+    drupal_set_message(t(':num existing mpxPlayers inactivated.', array(':num' => $import['inactives'])));
   }
 }
 
@@ -523,7 +523,7 @@ function media_theplatform_mpx_get_table_mpx_videos() {
     $thumbnail = media_get_thumbnail_preview($file);
     $rows[] = array(
       $video->video_id,
-      l(drupal_render($thumbnail), 'media/' . $video->fid, array('html' => TRUE)),
+      l(drupal_render($thumbnail), 'media/' . $video->fid, array('html' => TRUE, 'attributes' => array('class' => 'mpxmedia'))),
       $video->title,
       $video->description,
       // $video->guid,

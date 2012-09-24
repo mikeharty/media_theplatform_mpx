@@ -415,6 +415,17 @@ function media_theplatform_mpx_get_all_mpx_players() {
 }
 
 /**
+ * Returns array of all distinct accounts in mpx_player table.
+ */
+function media_theplatform_mpx_get_mpx_player_accounts() {
+  return db_select('mpx_player', 'p')
+    ->fields('p', array('account'))
+    ->distinct()
+    ->execute()
+    ->fetchAll();
+}
+
+/**
  * Returns CSS extracted from given Head HTML of a Player.
  *
  * @param string $head
