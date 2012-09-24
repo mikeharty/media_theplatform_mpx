@@ -50,7 +50,7 @@ function media_theplatform_mpx_file_formatter_video_settings($form, &$form_state
   $element = array();
   // We don't customize anything in Drupal, its all via thePlatform.
   $element['info'] = array(
-    '#markup' => t('All Player display settings are configured through your account on thePlatform and imported upon Sync.'),
+    '#markup' => t('All mpxPlayer display settings are configured through your account on thePlatform and imported upon Sync.'),
   );
   return $element;
 }

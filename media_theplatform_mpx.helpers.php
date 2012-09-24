@@ -253,17 +253,17 @@ function media_theplatform_mpx_append_string($find, $append, $html) {
 }
 
 /**
- * Alters Player HTML to render a mpx_video by its Guid.
+ * Alters mpxPlayer HTML to render a mpx_video by its Guid.
  *
  * Adds 'byGuid=$guid' to the tp:feedsserviceurl in div#tpReleaseModel.
  *
  * @param String $guid
  *   The Guid string of the mpx_video we want to render.
  * @param String $html
- *   String of Player HTML to be used to render the mpx_video.
+ *   String of mpxPlayer HTML to be used to render the mpx_video.
  *
  * @return String
- *   Player HTML for the mpx_video.
+ *   mpxPlayer HTML for the mpx_video.
  */
 function media_theplatform_mpx_add_guid_to_html($guid, $html) {
   $tag = 'tp:feedsServiceURL="';

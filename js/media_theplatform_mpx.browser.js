@@ -23,7 +23,7 @@
       // Update hidden value for mpx type.
       $('.players-browser .media-item').bind('click', function () {
         $("input[name='mpx_type']").val('players');
-        // Hide player selects on video-browser if we clicked on a Player item.
+        // Hide player selects on video-browser if we clicked on a mpxPlayer item.
         $('div.mpxplayer_select').hide();
       });  
       

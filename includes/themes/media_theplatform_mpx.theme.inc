@@ -20,14 +20,14 @@ function media_theplatform_mpx_preprocess_media_theplatform_mpx_video(&$variable
     $body = $player['body_html'];
   }
   if ($parts['mpx_type'] == 'video') {
-    // Retrieve default Player.
+    // Retrieve default mpxPlayer.
     $player = media_theplatform_mpx_get_mpx_player_by_fid($parts['player_fid']);
     if (!$player) {
       $variables['mpx_id'] = NULL;
-      $variables['player_html'] = t("A Default mpx Player must be selected to view this content.");
+      $variables['player_html'] = t("A Default mpxPlayer must be selected to view this content.");
       return;
     }
-    // Alter Default Player's code to play this specific mpx_video id.
+    // Alter Default mpxPlayer's code to play this specific mpx_video id.
     $body = media_theplatform_mpx_add_guid_to_html($parts['mpx_id'], $player['body_html']);
   }
   // Add mpx_id's into all of the body HTML.

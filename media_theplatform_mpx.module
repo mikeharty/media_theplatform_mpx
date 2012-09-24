@@ -219,9 +219,9 @@ function media_theplatform_mpx_file_delete($file) {
     $wrapper = file_stream_wrapper_get_instance_by_uri($file->uri);
     $parts = $wrapper->get_parameters();
 
-    // Deleting a Player:
+    // Deleting a mpxPlayer:
     // This is assuming that you know you're doing.
-    // If a user tries to delete through the Media forms, they can't submit if the Player is referenced by other mpxMedia.
+    // If a user tries to delete through the Media forms, they can't submit if the mpxPlayer is referenced by other mpxMedia.
     // If they're just deleting this record in the database or thru PHP, well, it could kill other mpxMedia Files that reference it and then good luck to you.
     if ($parts['mpx_type'] == 'player') {
       $player = media_theplatform_mpx_get_mpx_player_by_fid($file->fid);

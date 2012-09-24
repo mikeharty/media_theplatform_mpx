@@ -1,14 +1,14 @@
 <?php
 /**
  * @file
- * functions for Players.
+ * functions for mpxPlayers.
  */
 
 /**
- * Requests all mpx Players for specified thePlatform account.
+ * Requests all mpxPlayers for specified thePlatform account.
  *
- * - Returns array of Players' data indexed by Player id if there are Players.
- * - Returns FALSE if no Players exist in mpx account.
+ * - Returns array of mpxPlayers' data indexed by mpxPlayer id if there are mpxPlayers.
+ * - Returns FALSE if no mpxPlayers exist in mpx account.
  * - Returns error msg if no mpx_token variable.
  */
 function media_theplatform_mpx_get_players_from_theplatform() {
@@ -38,7 +38,7 @@ function media_theplatform_mpx_get_players_from_theplatform() {
     return FALSE;
   }
   foreach ($result_data['entries'] as $player) {
-    // We only want Players which are not disabled.
+    // We only want mpxPlayers which are not disabled.
     if (!$player['plplayer$disabled']) {
       $players[] = array(
         'id' => str_replace(media_theplatform_mpx_ID_PREFIX, '', $player['id']),
@@ -61,7 +61,7 @@ function media_theplatform_mpx_get_players_from_theplatform() {
 }
 
 /**
- * Returns array of Player fid's and Titles.
+ * Returns array of mpxPlayer fid's and Titles.
  */
 function media_theplatform_mpx_get_players_select($account = NULL) {
   // Retrieve players from mpx_player.
@@ -83,7 +83,7 @@ function media_theplatform_mpx_get_players_select($account = NULL) {
 }
 
 /**
- * Returns TRUE if given Player $fid matches given $account.
+ * Returns TRUE if given mpxPlayer $fid matches given $account.
  */
 function media_theplatform_mpx_is_valid_player_for_account($fid, $account) {
   $player = media_theplatform_mpx_get_mpx_player_by_fid($fid);
@@ -98,10 +98,10 @@ function media_theplatform_mpx_get_player_url($pid) {
 }
 
 /**
- * Returns HTML from a Player's URL.
+ * Returns HTML from a mpxPlayer's URL.
  *
  * @param String $pid
- *   A Player's Pid.
+ *   A mpxPlayer's Pid.
  * @param String $type
  *   Either 'head' or 'body'.
  *
@@ -115,7 +115,7 @@ function media_theplatform_mpx_get_player_html($pid, $type = 'head') {
 }
 
 /**
- * Imports all Players into Media Library.
+ * Imports all mpxPlayers into Media Library.
  *
  * @param String $type
  *   Import type. Possible values 'cron' or 'manual', for sync.
@@ -128,7 +128,7 @@ function media_theplatform_mpx_get_player_html($pid, $type = 'head') {
  */
 function media_theplatform_mpx_import_all_players($type = NULL) {
 
-  // Clicked on Players Sync form.
+  // Clicked on mpxPlayers Sync form.
   if ($type == 'manual') {
     global $user;
     $uid = $user->uid;
@@ -211,10 +211,10 @@ function media_theplatform_mpx_import_all_players($type = NULL) {
 }
 
 /**
- * Updates or inserts given Player within Media Library.
+ * Updates or inserts given mpxPlayer within Media Library.
  *
  * @param array $player
- *   Record of Player data requested from thePlatform
+ *   Record of mpxPlayer data requested from thePlatform
  *
  * @return String
  *   Returns output of media_theplatform_mpx_update_player() or media_theplatform_mpx_insert_player()
@@ -246,12 +246,12 @@ function media_theplatform_mpx_import_player($player) {
 }
 
 /**
- * Inserts given Player and File into Media Library.
+ * Inserts given mpxPlayer and File into Media Library.
  *
  * @param array $player
- *   Record of Player data requested from thePlatform
+ *   Record of mpxPlayer data requested from thePlatform
  * @param int $fid
- *   File fid of Player's File in file_managed if it already exists
+ *   File fid of mpxPlayer's File in file_managed if it already exists
  *   NULL if it doesn't exist
  *
  * @return String
@@ -318,12 +318,12 @@ function media_theplatform_mpx_insert_player($player, $fid = NULL) {
 }
 
 /**
- * Updates given Player and File in Media Library.
+ * Updates given mpxPlayer and File in Media Library.
  *
  * @param array $player
- *   Record of Player data requested from thePlatform
+ *   Record of mpxPlayer data requested from thePlatform
  * @param int $fid
- *   File fid of Player's File in file_managed
+ *   File fid of mpxPlayer's File in file_managed
  *
  * @return String
  *   Returns 'update' for counters in media_theplatform_mpx_import_all_players()
@@ -426,10 +426,10 @@ function media_theplatform_mpx_get_mpx_player_accounts() {
 }
 
 /**
- * Returns CSS extracted from given Head HTML of a Player.
+ * Returns CSS extracted from given Head HTML of a mpxPlayer.
  *
  * @param string $head
- *   HTML from the Player's <HEAD>
+ *   HTML from the mpxPlayer's <HEAD>
  *
  * @return String
  *   Returns all CSS (does not include a surrounding <style> wrapper)
@@ -447,10 +447,10 @@ function media_theplatform_mpx_get_mpx_player_css($head) {
 }
 
 /**
- * Returns array of CSS and JS data extracted from given Head HTML of a Player.
+ * Returns array of CSS and JS data extracted from given Head HTML of a mpxPlayer.
  *
  * @param string $pid
- *   The Player's Public ID
+ *   The mpxPlayer's Public ID
  *
  * @return Array
  *   Contains CSS classes/code, inline JS, and external JS file URLs
@@ -461,9 +461,9 @@ function media_theplatform_mpx_extract_mpx_player_data($pid) {
   $result = drupal_http_request($url);
   $head = $result->data;
 
-  // Player meta tags.
+  // mpxPlayer meta tags.
   $player_data['meta'] = get_meta_tags($url);
-  // Player CSS.
+  // mpxPlayer CSS.
   $player_data['css'] = media_theplatform_mpx_get_mpx_player_css($head);
   // External JS files.
   $js_files = media_theplatform_mpx_extract_all_js_links($head);
@@ -483,7 +483,7 @@ function media_theplatform_mpx_extract_mpx_player_data($pid) {
 }
 
 /**
- * Returns array of CSS and JS data stored in Player's player_data field.
+ * Returns array of CSS and JS data stored in mpxPlayer's player_data field.
  */
 function media_theplatform_mpx_get_player_data($player) {
   return unserialize($player['player_data']);

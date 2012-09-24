@@ -298,7 +298,7 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL) {
       'status' => 1,
     ))
     ->execute();
-  // Load default Player for appending to Filename.
+  // Load default mpxPlayer for appending to Filename.
   $player = media_theplatform_mpx_get_mpx_player_by_fid($player_id);
   media_theplatform_mpx_update_video_filename($fid, $video['title'], $player['title']);
 

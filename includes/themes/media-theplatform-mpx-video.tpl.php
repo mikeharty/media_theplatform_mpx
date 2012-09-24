@@ -1,10 +1,10 @@
 <?php
 /**
  * @file
- * Displays a mpx Media File.
+ * Displays a mpx File Entity.
  *
  * Available variables:
- * - $mpx_id: String of Player or Video's ID
+ * - $mpx_id: String ID of mpxPlayer / mpxMedia
  * - $player_html: String of HTML
  *
  * @see media_theplatform_mpx_preprocess_media_theplatform_mpx_video()

@@ -3,7 +3,7 @@ Media: thePlatform mpx
 
 * Creates a Media:mpx PHP Stream Wrapper for Media 
 
-* Imports mpx Players and Videos from a specified mpx account on thePlatform.com
+* Imports mpxPlayers and mpxMedia from a specified mpx account on thePlatform.com
 
 
 -- REQUIREMENTS --
@@ -17,22 +17,21 @@ Media: thePlatform mpx
 
 -- CONFIGURATION --
 
-1. After installing Media: tpMpx module, enter your mpx account information at Administration > Configuration > Media > Media: thePlatform mpx Settings
+1. After installing Media: tpMpx, Enter your mpx account information at Administration > Configuration > Media > Media: thePlatform mpx Settings
 
-2. Upon successful signin, select an Import Account to use for importing mpx Players and mpx Feeds.
+2. Upon successful signin, select an Import Account to use for importing mpxPlayers and mpx Feeds.
 
-3. Upon setting an Import Account, all mpx Players from the mpx Account on thePlatform will be imported into the Drupal Media Library.
+3. Upon setting an Import Account, all mpxPlayers from the mpx Account on thePlatform will be imported into the Drupal Media Library. You may view them at Administration > Content > Media > mpxPlayers.
 
-4. Go to Administration > Content > Media > mpx Players. Configure the Player Settings:
- * Select the Default Player to use for mpx Videos.
- * Select the Runtimes to use for Players.
- * Check whether or not to Sync Players on cron.
- 
-5. Go to Administration > Content > Media > mpx Videos. Configure the Video Settings:
+4. Go to Administration > Content > Media > mpxMedia. 
 
- * Select the Import Feed to use for mpx Videos. This list contains all of the mpx Feeds in your account which are enabled.
- * Check whether or not Sync Videos on cron.
- 
-6. Upon setting an Import Feed in the Video Settings, click "Sync Videos Now" to import all mpx Videos from the mpx Feed into your Media Library.
+Configure the mpxMedia Settings:
 
-7. Be sure to check 'thePlatform video' and 'thePlatform preview image' for Video in "Manage File Display" under Administration > Configuration > File Displays in order to render mpx File Entities.
+* Select the Import Feed to use for mpxMedia. 
+This list contains all of the mpx Feeds in your account which are enabled.
+
+* Select the Default mpxPlayer to use for displaying mpxMedia.
+
+5. Upon saving mpxMedia Settings, click "Sync mpxMedia Now" to import all mpx mpxMedia from the mpx Feed into your Drupal Media Library.
+
+6. In Administration > Configuration > File Displays, be sure to check 'thePlatform video' and 'thePlatform preview image' for Video in "Manage File Display" under in order to render mpxPlayers and mpxMedia.

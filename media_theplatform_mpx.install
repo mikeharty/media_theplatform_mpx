@@ -9,10 +9,10 @@
  */
 function media_theplatform_mpx_schema() {
   $schema['mpx_player'] = array(
-    'description' => 'Stores imported mpx Players.',
+    'description' => 'Stores imported mpxPlayers.',
     'fields' => array(
       'player_id' => array(
-        'description' => 'The primary identifier for a Player.',
+        'description' => 'The primary identifier for a mpxPlayer.',
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE,
@@ -45,7 +45,7 @@ function media_theplatform_mpx_schema() {
         'default' => '',
       ),
       'guid' => array(
-        'description' => 'Title of the Player',
+        'description' => 'Title of the mpxPlayer',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,

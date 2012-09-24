@@ -155,21 +155,21 @@ function media_theplatform_mpx_form_media_browser_submit($form, &$form_state) {
   $mpx_type = $form_state['values']['mpx_type'];
   $embed_code = $form_state['values']['selected_file'];
 
-  // If its a Player, simply return the fid from file_managed
+  // If its a mpxPlayer, simply return the fid from file_managed
   if ($mpx_type == 'players') {
     $fid = db_query("SELECT fid FROM {file_managed} WHERE uri=:uri", array(':uri' => $embed_code))->fetchField();
   }
 
-  // Elseif its a video:
+  // Elseif its mpxMedia:
   elseif ($mpx_type == 'videos') {
 
-    // The embed_code given is the file saved on the mpx_video record, so we need to split it out to see check for the Player/Combo.
+    // The embed_code given is the file saved on the mpx_video record, so we need to split it out to see check if mpxMedia/mpxPlayer combo exists.
     $url = parse_url($embed_code);
     $parts = explode('/', $url['path']);
     $video = media_theplatform_mpx_get_mpx_video_by_field('guid', $parts[1]);
     $account_label = str_replace('%', '-', $video['account']);
     
-    // Check if this Video / Player combo exists.
+    // Check if this mpxMedia / mpxPlayer combo exists.
     $key = 'player_fid_' . $account_label;
     watchdog('media_theplatform_mpx', $key);
     $player_fid = $form_state['values'][$key];

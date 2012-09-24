@@ -11,7 +11,7 @@
  */
 define('media_theplatform_mpx_NAMESPACE', 'media_theplatform_mpx__');
 
-// Use this string to extract a Player's id when importing.
+// Use this string to extract a mpxPlayer's id when importing.
 define('media_theplatform_mpx_ID_PREFIX', 'http://data.player.theplatform.com/player/data/Player/');
 
 /**

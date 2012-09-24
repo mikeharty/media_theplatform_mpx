@@ -209,7 +209,7 @@ function media_theplatform_mpx_page_mpx_players() {
 }
 
 /**
- * Form constructor for mpx Player Sync.
+ * Form constructor for mpxPlayer Sync.
  *
  * @ingroup forms
  */
