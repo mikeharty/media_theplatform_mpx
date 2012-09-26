@@ -59,7 +59,18 @@
           alert(Drupal.t('Please select an item.'));
           return false;
         }
-      });          
+      });
+      
+      // Filter list if mpxmedia_search is used.
+      $('#edit-mpxmedia-search').keyup(function() {
+        var value = $(this).val();
+        //var exp = new RegExp('^' + value, 'i');
+        var exp = new RegExp(value, 'i');
+        $('.videos-browser li').each(function() {
+          var isMatch = exp.test($('.item-data', this).text());
+          $(this).toggle(isMatch);
+        });
+      });       
 
     }
   }

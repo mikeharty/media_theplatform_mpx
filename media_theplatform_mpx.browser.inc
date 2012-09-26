@@ -73,13 +73,13 @@ function media_theplatform_mpx_form_media_browser($form, &$form_state = array(),
   $files = array();
   if ($mpx_type == 'videos') {
     $list = media_theplatform_mpx_get_all_mpx_videos();
-    $label = 'mpxMedia';
-    $form['search'] = array(
-      '#title' => t('Search'),
-      '#type' => 'textfield',
-      '#weight' => 0,
-    );    
+    $label = 'mpxMedia';   
     if (count($list) > 0) {
+      $form['mpxmedia_search'] = array(
+        '#title' => t('Search:'),
+        '#type' => 'textfield',
+        '#weight' => -20,
+      ); 
       // Fetch all distinct accounts from mpx_player.
       $accounts = media_theplatform_mpx_get_mpx_player_accounts();
       foreach ($accounts as $account) {
@@ -123,7 +123,7 @@ function media_theplatform_mpx_form_media_browser($form, &$form_state = array(),
     ));
     $form['list'][$file->uri] = array(
       '#markup' => $file->preview,
-      '#prefix' => '<li>',
+      '#prefix' => '<li class="mpx-browser">' . '<div class="item-data">' . $item->title . ' ' . $item->description .  '</div>',
       '#suffix' => '</li>',
     );
     $files[$file->uri] = $file;

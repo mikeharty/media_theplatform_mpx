@@ -20,3 +20,6 @@ div.mpxplayer_select {
 .mpxmedia .media-item .label-wrapper {
   margin-left: 0;
 }
+li.mpx-browser div.item-data{
+  display: none;
+}
