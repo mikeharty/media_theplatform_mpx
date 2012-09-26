@@ -74,6 +74,11 @@ function media_theplatform_mpx_form_media_browser($form, &$form_state = array(),
   if ($mpx_type == 'videos') {
     $list = media_theplatform_mpx_get_all_mpx_videos();
     $label = 'mpxMedia';
+    $form['search'] = array(
+      '#title' => t('Search'),
+      '#type' => 'textfield',
+      '#weight' => 0,
+    );    
     if (count($list) > 0) {
       // Fetch all distinct accounts from mpx_player.
       $accounts = media_theplatform_mpx_get_mpx_player_accounts();
