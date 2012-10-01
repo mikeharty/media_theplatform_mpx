@@ -288,7 +288,7 @@ function media_theplatform_mpx_get_table_mpx_players() {
     $rows[] = array(
       $player->player_id,
       $default,
-      l($player->title, 'media/' . $player->fid),
+      l($player->title, MPX_PATH_FILE . '/' . $player->fid),
       $player->description,
       // $player->id,
       $player->status,
@@ -523,7 +523,7 @@ function media_theplatform_mpx_get_table_mpx_videos() {
     $thumbnail = media_get_thumbnail_preview($file);
     $rows[] = array(
       $video->video_id,
-      l(drupal_render($thumbnail), 'media/' . $video->fid, array('html' => TRUE, 'attributes' => array('class' => 'mpxmedia'))),
+      l(drupal_render($thumbnail), MPX_PATH_FILE . '/' . $video->fid, array('html' => TRUE, 'attributes' => array('class' => 'mpxmedia'))),
       $video->title,
       $video->description,
       // $video->guid,

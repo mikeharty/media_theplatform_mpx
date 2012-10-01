@@ -4,10 +4,6 @@
  * Functions for media_theplatform_mpx.module.
  */
 
-define('MPX_PATH_ADMIN', 'admin/config/media/theplatform');
-define('MPX_PATH_PLAYER', 'admin/content/media/mpxplayer');
-define('MPX_PATH_VIDEO', 'admin/content/media/mpxmedia');
-
 // A registry of variable_get defaults.
 include_once ('includes/media_theplatform_mpx.variables.inc');
 // Hooks and callbacks for integrating with File Entity module for display.
@@ -17,6 +13,7 @@ include_once ('includes/media_theplatform_mpx.formatters.inc');
 include_once ('media_theplatform_mpx.admin.inc');
 include_once ('media_theplatform_mpx.browser.inc');
 include_once ('media_theplatform_mpx.helpers.php');
+include_once ('media_theplatform_mpx.paths.inc');
 include_once ('media_theplatform_mpx.player.php');
 include_once ('media_theplatform_mpx.video.php');
 
