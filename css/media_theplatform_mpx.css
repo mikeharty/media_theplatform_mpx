@@ -16,6 +16,7 @@
 }
 div.mpxplayer_select {
   height: 40px;
+  clear: both;
 }
 .mpxmedia .media-item .label-wrapper {
   margin-left: 0;
