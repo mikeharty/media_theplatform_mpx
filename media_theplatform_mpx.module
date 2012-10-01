@@ -13,9 +13,9 @@ include_once ('includes/media_theplatform_mpx.formatters.inc');
 include_once ('media_theplatform_mpx.admin.inc');
 include_once ('media_theplatform_mpx.browser.inc');
 include_once ('media_theplatform_mpx.helpers.php');
-include_once ('media_theplatform_mpx.paths.inc');
 include_once ('media_theplatform_mpx.player.php');
 include_once ('media_theplatform_mpx.video.php');
+include_once ('media_theplatform_mpx.version.inc');
 
 /**
  * Implements hook_page_build().
