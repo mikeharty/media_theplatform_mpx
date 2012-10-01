@@ -127,8 +127,7 @@ function media_theplatform_mpx_form_media_browser_submit($form, &$form_state) {
     
     // Check if this mpxMedia / mpxPlayer combo exists.
     $key = 'player_fid_' . $account_label;
-    watchdog('media_theplatform_mpx', $key);
-    $player_fid = $form_state['values'][$key];
+    $player_fid = $form_state['input'][$key];
     $uri = 'mpx://m/' . $parts[1] . '/p/' . $player_fid;
     $fid = db_query("SELECT fid FROM {file_managed} WHERE uri=:uri", array(':uri' => $uri))->fetchField();
     
