@@ -120,6 +120,13 @@ function media_theplatform_mpx_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'id' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Id in thePlatform',
+      ),
       'guid' => array(
         'description' => 'Guid in thePlatform',
         'type' => 'varchar',
@@ -190,9 +197,9 @@ function media_theplatform_mpx_schema() {
         'default' => '',
       ),
       'type_id' => array(
-        'description' => 'User uid',
-        'type' => 'int',
-        'not null' => FALSE,
+        'description' => 'Type id',
+        'type' => 'varchar',
+        'length' => 255,
         'default' => NULL,
       ),
       'action' => array(
@@ -231,6 +238,8 @@ function media_theplatform_mpx_install() {
  */
 function media_theplatform_mpx_uninstall() {
   drupal_load('module', 'media_theplatform_mpx');
+  // Expire signIn token.
+  media_theplatform_mpx_expire_token();
   foreach (media_theplatform_mpx_variable_default() as $variable => $value) {
     media_theplatform_mpx_variable_del($variable);
   }

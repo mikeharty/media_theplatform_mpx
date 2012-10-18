@@ -288,25 +288,13 @@ function media_theplatform_mpx_insert_log($data) {
  * Implements hook_cron().
  */
 function media_theplatform_mpx_cron() {
-  // Don't do anything if we don't have signIn token.
-  if (!media_theplatform_mpx_variable_get('token')) {
-    return;
-  }
-  // Check if username/password are still valid.
-  $username = media_theplatform_mpx_variable_get('username');
-  $pass = media_theplatform_mpx_variable_get('password');
-  if ($username && $pass) {
-    $valid_login = media_theplatform_mpx_signin($username, $pass);
-    if (!$valid_login) {
-      watchdog('media_theplatform_mpx', 'Invalid username/password for thePlatform.');
+  // Don't do anything if we don't have signIn token or import account.
+  if (media_theplatform_mpx_check_token() && media_theplatform_mpx_variable_get('import_account')) {
+    if (media_theplatform_mpx_variable_get('cron_players')) {
+      media_theplatform_mpx_import_all_players('cron');
     }
-    else {
-      if (media_theplatform_mpx_variable_get('cron_players')) {
-        media_theplatform_mpx_import_all_players('cron');
-      }
-      if (media_theplatform_mpx_variable_get('cron_videos')) {
-        media_theplatform_mpx_import_all_videos('cron');
-      }
+    if (media_theplatform_mpx_variable_get('cron_videos')) {
+      media_theplatform_mpx_import_all_videos('cron');
     }
   }
 }
@@ -323,10 +311,6 @@ function media_theplatform_mpx_permission() {
     'sync mpx_player' => array(
       'title' => t('Sync mpxPlayers manually'),
       'description' => t('Can access mpxPlayers Sync form.'),
-    ),
-    'administer mpx_video settings' => array(
-      'title' => t('Administer mpxMedia'),
-      'description' => t('Can set Import Feed, Default mpxPlayer, Sync mpxMedia form.'),
     ),
     'sync mpx_video' => array(
       'title' => t('Sync mpxMedia manually'),

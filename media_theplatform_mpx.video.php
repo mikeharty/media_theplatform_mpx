@@ -4,118 +4,136 @@
  * functions for Videos.
  */
 
-/**
- * Returns array of all mpx Feeds in specified thePlatform account.
- */
-function media_theplatform_mpx_get_feeds_select() {
-  // Check for the signIn token.
-  $mpx_token = media_theplatform_mpx_variable_get('token');
-  $mpx_account = media_theplatform_mpx_variable_get('import_account');
-  if (!$mpx_token || !$mpx_account) {
-    return FALSE;
-  }
-
-  global $user;
-  // Next get the list of feeds from the site.
-  // Use 'byDisabled=false' to only grab Feeds that are enabled.
-  $feed_url = 'http://data.feed.theplatform.com/feed/data/FeedConfig?schema=2.0.0&form=json&pretty=true&fields=pid,title,plfeed$availableFields&byDisabled=false&token=' . $mpx_token . '&account=' . $mpx_account;
-  $result = drupal_http_request($feed_url);
-  $result_data = drupal_json_decode($result->data);
-  if ($result_data['entryCount'] == 0) {
-    $log = array(
-      'uid' => $user->uid,
-      'type' => 'request',
-      'type_id' => NULL,
-      'action' => 'feed',
-      'details' => '0 feeds returned.',
-    );
-    media_theplatform_mpx_insert_log($log);
-    return FALSE;
-  }
-
-  foreach ($result_data['entries'] as $entry) {
-    $fields = $entry['plfeed$availableFields'];
-    // Feed must contain "title" AND a thumbnail field in availableFields.
-    if (in_array('title', $fields) && (in_array('defaultThumbnailUrl', $fields) || in_array('thumbnails.media:', $fields))) {
-      $feeds[$entry['plfeed$pid']] = $entry['title'];
-    }
-  }
-
-  $log = array(
-    'uid' => $user->uid,
-    'type' => 'request',
-    'type_id' => NULL,
-    'action' => 'feed',
-    'details' => count($feeds) . ' feeds returned.',
-  );
-  media_theplatform_mpx_insert_log($log);
-  return $feeds;
-}
-
 
 /**
- * Returns array of all mpx Media (Video) data from the Import Feed.
+ * Query thePlatform Media Notify service to get Media id's that have changed.
+ *
+ * @param String $since
+ *   The last notfication ID from thePlatform used to Sync mpxMedia.
+ *
+ * @return Array
+ *   Array of mpxMedia id's that have changed since $since.
  */
-function media_theplatform_mpx_get_feed_videos() {
-  $result = drupal_http_request(media_theplatform_mpx_get_import_feed_url());
-  $result_data = drupal_json_decode($result->data);
-  $videos = array();
-  global $user;
-  foreach ($result_data['entries'] as $video) {
-    // If defaultThumbnailUrl is available, use this value.
-    if (array_key_exists('defaultThumbnailUrl', $video)) {
-      $thumbnail_url = $video['defaultThumbnailUrl'];
-    }
-    // Else, parse through the thumbnails array.
-    else {
-      // If no thumbnails exist in thumbnails array, return error.
-      if (count($video['media$thumbnails']) == 0) {
-        $log = array(
-          'uid' => $user->uid,
-          'type' => 'request',
-          'type_id' => NULL,
-          'action' => 'video',
-          'details' => 'Error: no thumbnails in feed.',
-        );
-        media_theplatform_mpx_insert_log($log);
-        return "no thumbnails";
+function media_theplatform_mpx_get_changed_ids($since) {
+  $url = 'http://data.media.theplatform.com/media/notify?token=' . media_theplatform_mpx_variable_get('token') . '&account=' . media_theplatform_mpx_variable_get('import_account') . '&block=false&filter=Media&clientId=drupal_media_theplatform_mpx_' . media_theplatform_mpx_variable_get('account_pid') . '&since=' . $since;
+  $result = drupal_http_request($url);
+  if (isset($result->data)) {
+    $result_data = drupal_json_decode($result->data);
+    if (isset($result_data) && count($result_data) > 0) {
+
+      // Initalize arrays to store active and deleted id's.
+      $actives = array();
+      $deletes = array();
+
+      foreach ($result_data as $changed) {
+        // If no method has been returned, there are no changes.
+        if (!isset($changed['method'])) {
+          return FALSE;
+        }
+        // Store last notification.
+        $last_notification = $changed['id'];
+        // Grab the last component of the URL.
+        $media_id = basename($changed['entry']['id']);
+        if ($changed['method'] !== 'delete') {
+          // If this entry id isn't already in actives, add it.
+          if (!in_array($media_id, $actives)) {
+            $actives[] = $media_id;
+          }
+        }
+        else {
+          // Only add to deletes array if this mpxMedia already exists.
+          $video_exists = media_theplatform_mpx_get_mpx_video_by_field('id', $media_id);
+          if ($video_exists) {
+            $deletes[] = $media_id;
+          }
+        }
       }
-      $thumbnail_url = media_theplatform_mpx_parse_thumbnail_url($video['media$thumbnails']);
+      // Remove any deletes from actives, because it causes errors when updating.
+      $actives = array_diff($actives, $deletes);
+      return array(
+        'actives' => $actives,
+        'deletes' => $deletes,
+        'last_notification' => $last_notification,
+      );
     }
-    $videos[] = array(
-      'guid' => $video['guid'],
-      'title' => $video['title'],
-      'description' => $video['description'],
-      'thumbnail_url' => $thumbnail_url,
-    );
   }
-  $log = array(
-    'uid' => $user->uid,
-    'type' => 'request',
-    'type_id' => NULL,
-    'action' => 'video',
-    'details' => count($videos) . ' videos returned.',
-  );
-  media_theplatform_mpx_insert_log($log);
-  return $videos;
+  return FALSE;
 }
 
 /**
- * Returns URL string of the thumbnail object where isDefault == 1.
+ * Query thePlatform Media service to get all published mpxMedia files.
+ *
+ * @param String $ids
+ *   If 'all', return all published mpxMedia for the account. Else its a string of ids.
+ *
+ * @return Array
+ *   Returns multi dimensional array: data for published ids, and array of published ids.
  */
-function media_theplatform_mpx_parse_thumbnail_url($data) {
-  foreach ($data as $record) {
-    if ($record['plfile$isDefault']) {
-      return $record['plfile$url'];
+function media_theplatform_mpx_get_mpxmedia($ids) {
+  $token = media_theplatform_mpx_variable_get('token');
+  $account = urlencode(media_theplatform_mpx_variable_get('account_id'));
+  if ($ids == 'all') {
+    $ids = '';
+  }
+  else {
+    $id_array = explode(',', $ids);
+    $ids = '/' . $ids;
+  }
+  // Initalize arrays to store mpxMedia data.
+  $videos = array();
+  $published_ids = array();
+  $unpublished_ids = array();
+
+  // Get all Media that HasReleases (published) and belongs to import account id.
+  $url = 'http://data.media.theplatform.com/media/data/Media' . $ids . '?schema=1.4.0&form=json&pretty=true&byOwnerId=' . $account . '&byContent=byHasReleases%3Dtrue&token=' . $token;
+  $result = drupal_http_request($url);
+  if (isset($result->data)) {
+    $result_data = drupal_json_decode($result->data);
+    if ($result_data) {
+      // Keys entryCount and entries are only set when there is more than 1 entry.
+      if (isset($result_data['entryCount'])) {
+        foreach ($result_data['entries'] as $video) {
+          $published_ids[] = basename($video['id']);
+          $videos[] = array(
+            'id' => basename($video['id']),
+            'guid' => $video['guid'],
+            'title' => $video['title'],
+            'description' => $video['description'],
+            'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
+          );
+        }
+      }
+      // If only one row, result_data holds all the mpxMedia data (if its published).
+      // If responseCode is returned, it means 1 id in $ids has been unpublished and would return no data.
+      elseif (!isset($result_data['responseCode'])) {
+        $video = $result_data;
+        $published_ids[] = basename($video['id']);
+        $videos[] = array(
+          'id' => basename($video['id']),
+          'guid' => $video['guid'],
+          'title' => $video['title'],
+          'description' => $video['description'],
+          'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
+        );
+      }
+      // Store any ids that have been unpublished.
+      if (isset($id_array)) {
+        $unpublished_ids = array_diff($id_array, $published_ids);
+        // Filter out any ids which haven't been imported.
+        foreach ($unpublished_ids as $key => $unpublished_id) {
+          $video_exists = media_theplatform_mpx_get_mpx_video_by_field('id', $unpublished_id);
+          if (!$video_exists) {
+            unset($unpublished_ids[$key]);
+          }
+        }
+      }
+      return array(
+        'published' => $videos,
+        'unpublished' => $unpublished_ids,
+      );
     }
   }
-}
-
-/**
- * Returns thumbnail URL string for given guid from mpx_video table.
- */
-function media_theplatform_mpx_get_thumbnail_url($guid) {
-  return db_query("SELECT thumbnail_url FROM {mpx_video} WHERE guid=:guid", array(':guid' => $guid))->fetchField();
+  return FALSE;
 }
 
 /**
@@ -149,74 +167,79 @@ function media_theplatform_mpx_import_all_videos($type) {
   );
   media_theplatform_mpx_insert_log($log);
 
-  // Retrieve list of videos.
-  $videos = media_theplatform_mpx_get_feed_videos();
-  // If no result, return FALSE.
-  if (!$videos) {
-    return FALSE;
+  // Check if we have a notification stored.
+  $since = media_theplatform_mpx_variable_get('last_notification');
+  // If we do, just check for updates.
+  if ($since) {
+    // Get all IDs of mpxMedia that have been updated since last notification.
+    $changed = media_theplatform_mpx_get_changed_ids($since);
+    if (!$changed) {
+      drupal_set_message(t('All mpxMedia is up to date.'));
+      return FALSE;
+    }
+    $ids = NULL;
+    if (count($changed['actives']) > 0) {
+      $ids = implode(',', $changed['actives']);
+    }
   }
-  // If no thumbnails, return error code.
-  elseif ($videos == 'no thumbnails') {
-    return $videos;
+  else {
+    $ids = 'all';
   }
 
   // Initalize our counters.
-  $num_inserts = 0;
-  $num_updates = 0;
-  $num_inactives = 0;
-  $incoming = array();
+  $num_inserted = 0;
+  $num_updated = 0;
+  $num_unpublished = 0;
+  $num_deleted = 0;
 
-  // Loop through videos retrieved.
-  foreach ($videos as $video) {
-    // Keep track of the incoming guid.
-    $incoming[] = $video['guid'];
-    // Import this video.
-    $op = media_theplatform_mpx_import_video($video);
-    if ($op == 'insert') {
-      $num_inserts++;
+  // Import mpxMedia.
+  if ($ids != NULL) {
+    $videos = media_theplatform_mpx_get_mpxmedia($ids);
+    // If no result, return FALSE.
+    if (!$videos) {
+      return FALSE;
     }
-    elseif ($op == 'update') {
-      $num_updates++;
+    // Loop through published videos and update.
+    foreach ($videos['published'] as $video) {
+      // Import this video.
+      $op = media_theplatform_mpx_import_video($video);
+      if ($op == 'insert') {
+        $num_inserted++;
+      }
+      elseif ($op == 'update') {
+        $num_updated++;
+      }
+    }
+    // Set any unpublished mpxMedia to inactive.
+    foreach ($videos['unpublished'] as $unpublish_id) {
+      media_theplatform_mpx_set_mpx_video_inactive($unpublish_id, 'unpublished');
+      $num_unpublished++;
     }
   }
 
-  $num_inactives = 0;
+  // Set any deleted mpxMedia to inactive.
+  if ($since && count($changed['deletes'] > 0)) {
+    foreach ($changed['deletes'] as $delete_id) {
+      media_theplatform_mpx_set_mpx_video_inactive($delete_id, 'deleted');
+      $num_deleted++;
+    }
+  }
 
-  // Find all mpx_videos NOT in $incoming with status = 1.
-  $inactives = db_select('mpx_video', 'v')
-    ->fields('v', array('video_id', 'fid'))
-    ->condition('guid', $incoming, 'NOT IN')
-    ->condition('status', 1, '=')
-    ->execute();
-
-  global $user;
-
-  // Loop through results:
-  while ($record = $inactives->fetchAssoc()) {
-    // Set status to inactive.
-    $inactive = db_update('mpx_video')
-      ->fields(array('status' => 0))
-      ->condition('video_id', $record['video_id'], '=')
-      ->execute();
-
-    // Write mpx_log record.
-    $log = array(
-      'uid' => $user->uid,
-      'type' => 'video',
-      'type_id' => $record['video_id'],
-      'action' => 'inactive',
-      'details' => NULL,
-    );
-    media_theplatform_mpx_insert_log($log);
-    $num_inactives++;
+  // If this was an update, set last notification.
+  if ($since) {
+    media_theplatform_mpx_variable_set('last_notification', $changed['last_notification']);
+  }
+  // Else set last notification by querying thePlatform for a notification.
+  else {
+    media_theplatform_mpx_set_last_notification();
   }
 
   // Return counters as an array.
   return array(
-    'total' => count($videos),
-    'inserts' => $num_inserts,
-    'updates' => $num_updates,
-    'inactives' => $num_inactives,
+    'inserted' => $num_inserted,
+    'updated' => $num_updated,
+    'unpublished' => $num_unpublished,
+    'deleted' => $num_deleted,
   );
 }
 
@@ -296,6 +319,7 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL) {
       'created' => $timestamp,
       'updated' => $timestamp,
       'status' => 1,
+      'id' => $video['id'],
     ))
     ->execute();
   // Load default mpxPlayer for appending to Filename.
@@ -363,6 +387,7 @@ function media_theplatform_mpx_update_video($video) {
       'thumbnail_url' => $video['thumbnail_url'],
       'status' => 1,
       'updated' => $timestamp,
+      'id' => $video['id'],
     ))
     ->condition('guid', $video['guid'], '=')
     ->execute();
@@ -451,4 +476,64 @@ function media_theplatform_mpx_get_files_by_player_fid($fid) {
     ->condition('uri', '%/p/' . $fid, 'LIKE')
     ->execute()
     ->fetchAll();
+}
+
+/**
+ * Returns URL string of the thumbnail object where isDefault == 1.
+ */
+function media_theplatform_mpx_parse_thumbnail_url($data) {
+  foreach ($data as $record) {
+    if ($record['plfile$isDefault']) {
+      return $record['plfile$url'];
+    }
+  }
+}
+
+/**
+ * Returns thumbnail URL string for given guid from mpx_video table.
+ */
+function media_theplatform_mpx_get_thumbnail_url($guid) {
+  return db_query("SELECT thumbnail_url FROM {mpx_video} WHERE guid=:guid", array(':guid' => $guid))->fetchField();
+}
+
+/**
+ * Returns most recent notification sequence number from thePlatform.
+ */
+function media_theplatform_mpx_set_last_notification() {
+
+  $url = 'http://data.media.theplatform.com/media/notify?token=' . media_theplatform_mpx_variable_get('token') . '&account=' . media_theplatform_mpx_variable_get('import_account') . '&filter=Media&clientId=drupal_media_theplatform_mpx_' . media_theplatform_mpx_variable_get('account_pid');
+  $result = drupal_http_request($url);
+  $result_data = drupal_json_decode($result->data);
+  if ($result_data) {
+    media_theplatform_mpx_variable_set('last_notification', $result_data[0]['id']);
+  }
+  return FALSE;
+}
+
+/**
+ * Query thePlatform Media service to get all published mpxMedia files.
+ *
+ * @param String $id
+ *   Value for mpx_video.id.
+ *
+ * @param String $op
+ *   Valid values: 'unpublished' or 'deleted'.
+ */
+function media_theplatform_mpx_set_mpx_video_inactive($id, $op) {
+  // Set status to inactive.
+  $inactive = db_update('mpx_video')
+  ->fields(array('status' => 0))
+  ->condition('id', $id, '=')
+  ->execute();
+  // Write mpx_log record.
+  // @todo: Set type_id to $id once type_id gets changed to varchar.
+  global $user;
+  $log = array(
+    'uid' => $user->uid,
+    'type' => 'video',
+    'type_id' => NULL,
+    'action' => $op,
+    'details' => $id,
+  );
+  media_theplatform_mpx_insert_log($log);
 }

@@ -24,13 +24,13 @@ function media_theplatform_mpx_form_media_browser($form, &$form_state = array(),
   $files = array();
   if ($mpx_type == 'videos') {
     $list = media_theplatform_mpx_get_all_mpx_videos();
-    $label = 'mpxMedia';   
+    $label = 'mpxMedia';
     if (count($list) > 0) {
       $form['mpxmedia_search'] = array(
         '#title' => t('Search:'),
         '#type' => 'textfield',
         '#weight' => -20,
-      ); 
+      );
       // Fetch all distinct accounts from mpx_player.
       $accounts = media_theplatform_mpx_get_mpx_player_accounts();
       foreach ($accounts as $account) {
@@ -124,13 +124,13 @@ function media_theplatform_mpx_form_media_browser_submit($form, &$form_state) {
     $parts = explode('/', $url['path']);
     $video = media_theplatform_mpx_get_mpx_video_by_field('guid', $parts[1]);
     $account_label = str_replace('%', '-', $video['account']);
-    
+
     // Check if this mpxMedia / mpxPlayer combo exists.
     $key = 'player_fid_' . $account_label;
     $player_fid = $form_state['input'][$key];
     $uri = 'mpx://m/' . $parts[1] . '/p/' . $player_fid;
     $fid = db_query("SELECT fid FROM {file_managed} WHERE uri=:uri", array(':uri' => $uri))->fetchField();
-    
+
     // If it doesn't exist, create the file.
     if (!$fid) {
       $provider = media_internet_get_provider($uri);

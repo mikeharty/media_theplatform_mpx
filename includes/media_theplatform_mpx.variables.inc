@@ -14,6 +14,9 @@ define('media_theplatform_mpx_NAMESPACE', 'media_theplatform_mpx__');
 // Use this string to extract a mpxPlayer's id when importing.
 define('media_theplatform_mpx_ID_PREFIX', 'http://data.player.theplatform.com/player/data/Player/');
 
+function media_theplatform_mpx_get_encrypted_list() {
+  return array('password', 'token', 'username');
+}
 /**
  * Wrapper for variable_get() using the Media: mpx variable registry.
  *
@@ -27,6 +30,9 @@ function media_theplatform_mpx_variable_get($name, $default = NULL) {
   }
   // Namespace all variables.
   $variable_name = media_theplatform_mpx_NAMESPACE . $name;
+  if (in_array($name, media_theplatform_mpx_get_encrypted_list())) {
+    return base64_decode(variable_get($variable_name, $default));
+  }
   return variable_get($variable_name, $default);
 }
 
@@ -39,6 +45,9 @@ function media_theplatform_mpx_variable_get($name, $default = NULL) {
  */
 function media_theplatform_mpx_variable_set($name, $value) {
   $variable_name = media_theplatform_mpx_NAMESPACE . $name;
+  if (in_array($name, media_theplatform_mpx_get_encrypted_list())) {
+    return variable_set($variable_name, base64_encode($value));
+  }
   return variable_set($variable_name, $value);
 }
 
@@ -67,11 +76,13 @@ function media_theplatform_mpx_variable_default($name = NULL) {
   if (!isset($defaults)) {
     $defaults = array(
       'account_pid' => NULL,
+      'account_id' => NULL,
       'cron_players' => 1,
       'cron_videos' => 1,
+      'date_idletimeout' => NULL,
       'default_player_fid' => NULL,
-      'feed' => NULL,
       'import_account' => NULL,
+      'last_notification' => NULL,
       'password' => NULL,
       'token' => NULL,
       'username' => NULL,

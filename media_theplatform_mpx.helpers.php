@@ -6,18 +6,14 @@
  */
 
 /**
- * Signs into thePlatform and sets signIn token variable.
- *
- * @param string $username
- *   Username on thePlatform.com.
- * @param string $pass
- *   Password on thePlatform.com.
- *
- * @return Boolean
- *   TRUE if username/pass is valid, FALSE if not.
+ * Signs into thePlatform and sets/returns signIn token variable.  Returns FALSE if fails.
  */
-function media_theplatform_mpx_signin($username, $pass) {
-  $login_url = "https://identity.auth.theplatform.com/idm/web/Authentication/signIn?schema=1.0&form=json";
+function media_theplatform_mpx_signin() {
+  $username = media_theplatform_mpx_variable_get('username');
+  $pass = media_theplatform_mpx_variable_get('password');
+  // IdleTimeout is stored in milliseconds.  Set to 2 weeks.
+  $idle_timeout = 1209600000;
+  $login_url = "https://identity.auth.theplatform.com/idm/web/Authentication/signIn?schema=1.0&form=json&_idleTimeout=" . $idle_timeout;
   $data = 'username=' . $username . '&password=' . $pass;
   $options = array(
     'method' => 'POST',
@@ -31,6 +27,8 @@ function media_theplatform_mpx_signin($username, $pass) {
   if (isset($result_data['signInResponse']['token'])) {
     $mpx_token = $result_data['signInResponse']['token'];
     media_theplatform_mpx_variable_set('token', $mpx_token);
+    // Store unix timestamp of when this token will idleTimeout.
+    media_theplatform_mpx_variable_set('date_idletimeout', time() + $idle_timeout / 1000);
     $action = 'signIn successful';
   }
   // Else DESTROY the token variable!
@@ -46,17 +44,10 @@ function media_theplatform_mpx_signin($username, $pass) {
     'type' => 'settings',
     'type_id' => NULL,
     'action' => $action,
-    'details' => 'user = ' . $username . ' | pass = ' . $pass,
+    'details' => NULL,
   );
   media_theplatform_mpx_insert_log($log);
   return $mpx_token;
-}
-
-/**
- * Returns string of thePlatform account pid.
- */
-function media_theplatform_mpx_get_account_pid() {
-  return media_theplatform_mpx_variable_get('account_pid');
 }
 
 /**
@@ -69,8 +60,8 @@ function media_theplatform_mpx_get_accounts_select() {
     return t('There was an error with your request.');
   }
   // Get the list of accounts from thePlatform.
-  $feed_url = 'http://access.auth.theplatform.com/data/Account?schema=1.3.0&form=json&byDisabled=false&token=' . $mpx_token;
-  $result = drupal_http_request($feed_url);
+  $url = 'http://access.auth.theplatform.com/data/Account?schema=1.3.0&form=json&byDisabled=false&token=' . $mpx_token;
+  $result = drupal_http_request($url);
   $result_data = drupal_json_decode($result->data);
 
   global $user;
@@ -107,20 +98,32 @@ function media_theplatform_mpx_get_accounts_select() {
   return $accounts;
 }
 
-
 /**
- * Returns URL string of the default mpx Feed.
+ * Requests signin token if the current token's idleTimeout date has passed.
  */
-function media_theplatform_mpx_get_import_feed_url() {
-  $feed = media_theplatform_mpx_variable_get('feed');
-  if ($feed) {
-    $account = media_theplatform_mpx_get_account_pid();
-    $feed_url = 'http://feed.theplatform.com/f/' . media_theplatform_mpx_get_account_pid() . '/' . $feed . '?form=json';
-    return $feed_url;
+function media_theplatform_mpx_check_token() {
+  if (!media_theplatform_mpx_variable_get('token')) {
+    return FALSE;
   }
-  return NULL;
+  // If idleTimeout date has passed, signIn again.
+  if (media_theplatform_mpx_variable_get('date_idletimeout') < time()) {
+    // Expire the current token.
+    media_theplatform_mpx_expire_token();
+    // Retrieve and return new token.
+    return media_theplatform_mpx_signin();
+  }
+  else {
+    return TRUE;
+  }
 }
 
+/**
+ * Requests expiration of current signin token.
+ */
+function media_theplatform_mpx_expire_token() {
+  $url = 'https://identity.auth.theplatform.com/idm/web/Authentication/signOut?schema=1.0&form=json&_token=' . media_theplatform_mpx_variable_get('token');
+  $result = drupal_http_request($url); 
+}
 
 /**
  * Checks if file is active in its mpx datatable.

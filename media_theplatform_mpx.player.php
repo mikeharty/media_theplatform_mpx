@@ -94,7 +94,7 @@ function media_theplatform_mpx_is_valid_player_for_account($fid, $account) {
  * Returns URL string of a player for given $pid.
  */
 function media_theplatform_mpx_get_player_url($pid) {
-  return 'http://player.theplatform.com/p/' . media_theplatform_mpx_get_account_pid() . '/' . $pid;
+  return 'http://player.theplatform.com/p/' . media_theplatform_mpx_variable_get('account_pid') . '/' . $pid;
 }
 
 /**

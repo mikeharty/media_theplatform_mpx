@@ -32,7 +32,7 @@ class MediaInternetThePlatformMpxHandler extends MediaInternetBaseHandler {
   }
 
   /**
-   * There is no need to validate - all videos are ingested by feed.
+   * There is no need to validate - all videos are ingested by thePlatform API.
    */
   public function validate() {
 
