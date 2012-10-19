@@ -319,24 +319,3 @@ function media_theplatform_mpx_permission() {
     ),
   );
 }
-
-/**
- * Implements hook_form_alter().
- */
-function media_theplatform_mpx_form_alter(&$form, &$form_state, $form_id) {
-  // Check if it's media: single file delete form OR bulk media delete form.
-  $message = FALSE;
-  $media_file_delete_form = ($form['#id'] == 'media-admin' && isset($form['operation']) && $form['operation']['#value'] == 'delete');
-  if ($form['#id'] == 'media-multiple-delete-confirm' || $media_file_delete_form) {
-    foreach ($form['files'] as $fid) {
-      if (isset($fid['#value'])) {
-        $file = file_load($fid['#value']);
-        if ($file->filemime == 'video/mpx' && media_theplatform_mpx_get_files_by_player_fid($file->fid)) {
-          drupal_set_message(t('@filename cannot be deleted because it is referenced by other mpxMedia Files.', array('@filename' => $file->filename)), 'error');
-          unset($form['actions']['submit']);
-          unset($form['description']);
-        }
-      }
-    }
-  }
-}

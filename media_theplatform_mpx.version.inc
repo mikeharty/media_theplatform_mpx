@@ -25,3 +25,31 @@ function media_theplatform_mpx_media_browser_plugin_info() {
 
   return $info;
 }
+
+/**
+ * Implements hook_form_alter().
+ */
+function media_theplatform_mpx_form_alter(&$form, &$form_state, $form_id) {
+  // Check if media: single file delete form.
+  if ($form['#id'] == 'file-delete-form') {
+    $file = file_load($form['fid']['#value']);
+    if ($file->filemime == 'video/mpx' && media_theplatform_mpx_get_files_by_player_fid($file->fid)) {
+      drupal_set_message(t('@filename cannot be deleted because it is referenced by other mpxMedia Files.', array('@filename' => $file->filename)), 'error');
+      unset($form['actions']['submit']);
+      unset($form['description']);    
+    }
+  }
+  // Check if bulk media delete form.
+  elseif ($form['#id'] == 'file-entity-admin-files' && isset($form['operation']) && $form['operation']['#value'] == 'delete') {
+    foreach ($form['files'] as $key => $data ) {
+      if (is_numeric($key) && isset($data['#value'])) {
+        $file = file_load($data['#value']);
+        if ($file->filemime == 'video/mpx' && media_theplatform_mpx_get_files_by_player_fid($file->fid)) {
+          drupal_set_message(t('@filename cannot be deleted because it is referenced by other mpxMedia Files.', array('@filename' => $file->filename)), 'error');
+          unset($form['actions']['submit']);
+          unset($form['description']);
+        }
+      }
+    }
+  }
+}
