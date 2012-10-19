@@ -86,8 +86,14 @@ function media_theplatform_mpx_get_players_select($account = NULL) {
  * Returns TRUE if given mpxPlayer $fid matches given $account.
  */
 function media_theplatform_mpx_is_valid_player_for_account($fid, $account) {
+  if ($fid == NULL) {
+    return FALSE;
+  }
   $player = media_theplatform_mpx_get_mpx_player_by_fid($fid);
-  return ($player['account'] == $account);
+  if ($player) {
+    return ($player['account'] == $account);
+  }
+  return FALSE;
 }
 
 /**

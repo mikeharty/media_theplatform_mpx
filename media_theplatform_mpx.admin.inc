@@ -346,7 +346,7 @@ function media_theplatform_mpx_form_mpx_video_sync($form, &$form_state) {
   $form['video_sync'] = array(
     '#type' => 'fieldset',
     '#title' => t('Sync mpxMedia'),
-    '#description' => t('Note: Any mpxMedia which has been deleted from thePlatfrom mpx  will be set to "Inactive".'),
+    '#description' => t('Note: Any mpxMedia which has been unpublished or deleted from thePlatform mpx will be set to "Inactive".'),
     '#collapsible' => TRUE,
     '#collapsed' => $collapsed,
   );

@@ -288,12 +288,13 @@ function media_theplatform_mpx_insert_log($data) {
  * Implements hook_cron().
  */
 function media_theplatform_mpx_cron() {
+  $import_account = media_theplatform_mpx_variable_get('import_account');
   // Don't do anything if we don't have signIn token or import account.
-  if (media_theplatform_mpx_check_token() && media_theplatform_mpx_variable_get('import_account')) {
+  if (media_theplatform_mpx_check_token() && $import_account) {
     if (media_theplatform_mpx_variable_get('cron_players')) {
       media_theplatform_mpx_import_all_players('cron');
     }
-    if (media_theplatform_mpx_variable_get('cron_videos')) {
+    if (media_theplatform_mpx_variable_get('cron_videos') && media_theplatform_mpx_is_valid_player_for_account(media_theplatform_mpx_variable_get('default_player_fid'), $import_account)) {
       media_theplatform_mpx_import_all_videos('cron');
     }
   }
