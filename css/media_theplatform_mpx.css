@@ -24,3 +24,9 @@ div.mpxplayer_select {
 li.mpx-browser div.item-data{
   display: none;
 }
+#media-tab-theplatform_mpx_mpxmedia #scrollbox,
+#media-tab-theplatform_mpx_mpxplayer #scrollbox {
+  height: 300px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
