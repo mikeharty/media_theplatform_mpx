@@ -26,71 +26,104 @@ function media_theplatform_mpx_page_build(&$page) {
   $infinite = strpos($page_array_text, '*RECURSION*');
   // Only extract file ID's if we're on a page array with no recursion.
   if ($infinite === FALSE) {
-    array_walk_recursive($page, 'media_theplatform_mpx_add_player_head');
+    array_walk_recursive($page, 'media_theplatform_mpx_add_player_head_recursive');
   }
 }
 
+
 /**
- * Adds mpxPlayer CSS, JS, Meta tags into Drupal <head> if a mpxPlayer or mpxMedia File is present.
+ * Implements hook_preprocess_panels_pane().
+ */
+function media_theplatform_mpx_preprocess_panels_pane(&$vars) {
+  // This will add MPX JS/CSS for any nodes displayed as "full" in Panels panes that have MPX Files embedded.
+  array_walk_recursive($vars, 'media_theplatform_mpx_add_player_head_recursive');
+}
+
+/**
+ * Implements hook_ctools_render_alter().
+ */
+function media_theplatform_mpx_ctools_render_alter(&$info, &$page, &$context) {
+  // This will add MPX JS/CSS for Ctools custom content types that have MPX Files embedded.
+  $context_array_values = print_r($context, TRUE);
+  $fids = media_theplatform_mpx_extract_fids($context_array_values);
+  media_theplatform_mpx_add_player_head($fids);
+}
+
+/**
+ * Searches $item => $key for Media Files and calls MPX add_player_head for all found Files.
  *
  * @param $item
  *   The value of the array element.  Could be a String, Array, or anything.
  * @param String $key
  *   The key of the array element.
  */
-function media_theplatform_mpx_add_player_head($item, $key) {
-  $files = array();
+function media_theplatform_mpx_add_player_head_recursive($item, $key) {
+  $fids = array();
   // Check $item for embedded media markup:
   if ($key == 'value' && is_string($item) && $item != '') {
-    $files = media_theplatform_mpx_extract_fids($item);
+    $fids = media_theplatform_mpx_extract_fids($item);
   }
   // Else check if this is a file object:
-  elseif ($key == '#file' && is_object($item) && $item->filemime == 'video/mpx') {
-    $files[] = $item->fid;
+  elseif ($key == '#file' && is_object($item) && isset($item->filename) && $item->filemime == 'video/mpx') {
+    $fids[] = $item->fid;
   }
   // If we found files:
-  if (count($files) > 0) {
-    foreach ($files as $fid) {
-      $file = file_load($fid);
-      // If its a mpx file, get player data and add it into Drupal <head>.
-      if ($file && $file->filemime == 'video/mpx') {
-        $wrapper = file_stream_wrapper_get_instance_by_uri($file->uri);
-        $parts = $wrapper->get_parameters();
+  if (count($fids) > 0) {
+    media_theplatform_mpx_add_player_head($fids);
+  }
+}
 
-        // Load the mpx_player data.
-        $player = media_theplatform_mpx_get_mpx_player_by_fid($parts['player_fid']);
-        $player_data = media_theplatform_mpx_get_player_data($player);
+/**
+ * Adds mpxPlayer CSS, JS, Meta tags into Drupal <head> for each mpx Media File Entity in $fids.
+ *
+ * @param Array $fids
+ *   Array of File id's.
+ */
+function media_theplatform_mpx_add_player_head($fids) {
+  // Remove duplicate fids.
+  $fids = array_unique($fids);
 
-        // Replace css selectors with #mpx_id selectors.
-        $player_css = media_theplatform_mpx_replace_css_ids($player_data['css'], $parts['mpx_id']);
-        // Add mpxPlayer CSS.
-        drupal_add_css($player_css, 'inline');
+  foreach ($fids as $fid) {
+    $file = file_load($fid);
 
-        // Add mpxPlayer inline JS.
-        if (isset($player_data['js']['inline'])) {
-          foreach ($player_data['js']['inline'] as $script) {
-            drupal_add_js($script, 'inline');
-          }
+    // If its a mpx file, get player data and add it into Drupal <head>.
+    if ($file && $file->filemime == 'video/mpx') {
+      $wrapper = file_stream_wrapper_get_instance_by_uri($file->uri);
+      $parts = $wrapper->get_parameters();
+
+      // Load the mpx_player data.
+      $player = media_theplatform_mpx_get_mpx_player_by_fid($parts['player_fid']);
+      $player_data = media_theplatform_mpx_get_player_data($player);
+
+      // Replace css selectors with #mpx_id selectors.
+      $player_css = media_theplatform_mpx_replace_css_ids($player_data['css'], $parts['mpx_id']);
+      // Add mpxPlayer CSS.
+      drupal_add_css($player_css, 'inline');
+
+      // Add mpxPlayer inline JS.
+      if (isset($player_data['js']['inline'])) {
+        foreach ($player_data['js']['inline'] as $script) {
+          drupal_add_js($script, 'inline');
         }
-        // Add mpxPlayer external JS files.
-        if (isset($player_data['js']['external'])) {
-          foreach ($player_data['js']['external'] as $src) {
-            drupal_add_js($src, 'external');
-          }
+      }
+      // Add mpxPlayer external JS files.
+      if (isset($player_data['js']['external'])) {
+        foreach ($player_data['js']['external'] as $src) {
+          drupal_add_js($src, 'external');
         }
+      }
 
-        // Add mpxPlayer meta tags.
-        if (isset($player_data['meta'])) {
-          foreach ($player_data['meta'] as $key => $value) {
-            $element = array(
-              '#tag' => 'meta',
-              '#attributes' => array(
-                'property' => $key,
-                'content' => $value,
-              ),
-            );
-            drupal_add_html_head($element, $key);
-          }
+      // Add mpxPlayer meta tags.
+      if (isset($player_data['meta'])) {
+        foreach ($player_data['meta'] as $key => $value) {
+          $element = array(
+            '#tag' => 'meta',
+            '#attributes' => array(
+              'property' => $key,
+              'content' => $value,
+            ),
+          );
+          drupal_add_html_head($element, $key);
         }
       }
     }

@@ -309,7 +309,7 @@ function media_theplatform_mpx_extract_string($start_str, $end_str, $input) {
  *   The File fid's that the markup contains.
  */
 function media_theplatform_mpx_extract_fids($text) {
-  $pattern = '/,\"fid\":\"(.*?)\"/';
+  $pattern = '/\"fid\":\"(.*?)\"/';
   preg_match_all($pattern, $text, $results);
   return $results[1];
 }
