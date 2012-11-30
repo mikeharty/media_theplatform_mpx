@@ -1,6 +1,6 @@
-Media: thePlatform mpx 7.x-2.2, 2012-11-26
+Media: thePlatform mpx 7.x-2.2
 ------------------------------------------
-- Supports embedding mpx Media Files into Nodes and Custom Content in Panels.
+- Added hooks for Ctools custom content and embedding nodes in Panels.
 
 
 Media: thePlatform mpx 7.x-2.1, 2012-10-22
