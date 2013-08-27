@@ -31,6 +31,10 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
       $params['mpx_id'] = $parts[1];
       // The fid of mpxPlayer to render this mpxMedia with.
       $params['player_fid'] = $parts[3];
+      // fallback to default.
+      if (!$params['player_fid']) {
+        $params['player_fid'] = media_theplatform_mpx_variable_get('default_player_fid');
+      }
     }
 
     // Elseif mpxPlayer:

@@ -57,6 +57,7 @@ function media_theplatform_mpx_form_signin_theplatform($form, &$form_state) {
   $form['account']['theplatform_username'] = array(
     '#type' => 'textfield',
     '#title' => t('Username'),
+    '#description' => t('Prefix your username with "mpx/". e.g. "mpx/admin@example.com".'),
     '#maxlength' => 255,
     '#required' => TRUE,
     '#default_value' => media_theplatform_mpx_variable_get('username'),

@@ -66,7 +66,7 @@ function media_theplatform_mpx_get_accounts_select() {
 
   global $user;
 
-  if ($result_data['entryCount'] == 0) {
+  if (empty($result_data['entryCount']) || $result_data['entryCount'] == 0) {
     $log = array(
       'uid' => $user->uid,
       'type' => 'request',
@@ -75,7 +75,9 @@ function media_theplatform_mpx_get_accounts_select() {
       'details' => '0 accounts returned.',
     );
     media_theplatform_mpx_insert_log($log);
-    return FALSE;
+    //return FALSE;
+    drupal_set_message(t('The logged in user does not have the privilege to set the account.'), 'warning');
+    return array();
   }
   $accounts = array();
   $accounts_data = array();
