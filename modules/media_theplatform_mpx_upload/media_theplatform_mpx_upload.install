@@ -1,0 +1,73 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for media_theplatform_mpx_upload.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function media_theplatform_mpx_schema() {
+
+  $schema['mpx_upload_queue'] = array(
+    'description' => 'MPX Upload Queue',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Counter ID field',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'file_path' => array(
+        'description' => 'Path to upload media',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'upload_server' => array(
+        'description' => 'URL of server to be uploaded to',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'publish_profiles' => array(
+        'description' => 'Profiles to publish media with when upload is completed',
+        'type' => 'blob',
+      ),
+      'updated' => array(
+        'description' => 'Timestamp of last action',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => 'Upload status',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      'message' => array(
+        'description' => 'Upload status message',
+        'type' => 'blob',
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function media_theplatform_mpx_upload_install() {
+  return array();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function media_theplatform_mpx_upload_uninstall() {
+  return array();
+}
