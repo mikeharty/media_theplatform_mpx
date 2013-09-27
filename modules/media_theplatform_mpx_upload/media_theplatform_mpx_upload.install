@@ -7,26 +7,32 @@
 /**
  * Implements hook_schema().
  */
-function media_theplatform_mpx_schema() {
-
-  $schema['mpx_upload_queue'] = array(
-    'description' => 'MPX Upload Queue',
+function media_theplatform_mpx_upload_schema() {
+  $schema['mpx_uploads'] = array(
+    'description' => 'MPX Uploads',
     'fields' => array(
       'id' => array(
-        'description' => 'Counter ID field',
+        'description' => 'Auto-increment ID',
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
+      'media_object_id' => array(
+        'description' => 'MPX media object ID',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''
+      ),
       'file_path' => array(
-        'description' => 'Path to upload media',
+        'description' => 'Path to upload file',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
       'upload_server' => array(
-        'description' => 'URL of server to be uploaded to',
+        'description' => 'URL of upload server',
         'type' => 'varchar',
         'length' => 255,
         'not null' => FALSE,
@@ -36,15 +42,22 @@ function media_theplatform_mpx_schema() {
         'description' => 'Profiles to publish media with when upload is completed',
         'type' => 'blob',
       ),
+      'created' => array(
+        'description' => 'Created timestamp',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'updated' => array(
-        'description' => 'Timestamp of last action',
+        'description' => 'Updated timestamp',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'status' => array(
         'description' => 'Upload status',
-        'type' => 'int',
+        'type' => 'varchar',
+        'length' => 255,
         'not null' => TRUE,
         'default' => 1,
       ),

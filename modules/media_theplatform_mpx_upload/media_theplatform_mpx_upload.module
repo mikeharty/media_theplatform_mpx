@@ -1,0 +1,69 @@
+<?php
+// Helper functions.
+include_once ('media_theplatform_mpx_upload.admin.inc');
+include_once ('media_theplatform_mpx_upload.form.inc');
+include_once ('media_theplatform_mpx_upload.upload.inc');
+
+/**
+ * Implements hook_permission().
+ */
+function media_theplatform_mpx_upload_permission() {
+  return array(
+    'upload mpx videos' => array(
+      'title' => t('Upload mpxMedia'),
+      'description' => t('Can upload videos to mpx'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function media_theplatform_mpx_upload_menu() {
+  $items = array();
+  $items[MPX_PATH_ADMIN.'/settings'] = array(
+    'title' => t('Import Settings'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10
+  );
+
+  $items[MPX_PATH_ADMIN.'/upload'] = array(
+    'title' => t('Upload Settings'),
+    'description' => t('Configure thePlatForm mpx upload settings.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('media_theplatform_mpx_form_upload_server_settings'),
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array('administer mpx account'),
+  );
+
+  $items['mpx-worker/upload/%'] = array(
+    'title' => t('MPX Upload Callback'),
+    'description' => '',
+    'page callback' => 'media_theplatform_mpx_upload_worker',
+    'page arguments' => array(2),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access content'),
+  );
+
+  $items['mpx-worker/upload/%/status'] = array(
+    'title' => t('MPX Status Callback'),
+    'description' => '',
+    'page callback' => 'media_theplatform_mpx_upload_worker_status',
+    'page arguments' => array(2),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access content'),
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_media_browser_plugin_info().
+ */
+function media_theplatform_mpx_upload_media_browser_plugin_info() {
+  $info['theplatform_mpx_mpxmedia_upload'] = array(
+    'title' => t('mpxMedia Upload'),
+    'class' => 'MediaThePlatformMpxMediaUpload',
+  );
+  return $info;
+}
