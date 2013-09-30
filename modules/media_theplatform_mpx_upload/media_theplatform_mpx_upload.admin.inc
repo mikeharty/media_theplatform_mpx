@@ -27,5 +27,18 @@ function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
     );
   }
 
+  $form['publishing'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Publishing Settings'),
+    '#collapsible' => FALSE,
+    '#collapsed' => FALSE,
+  );
+
+  $form['publishing']['auto-publish'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Publish nodes automatically when videos are finished publishing in MPX.'),
+    '#default_value' => media_theplatform_mpx_variable_get('upload_auto_publish', true),
+  );
+
   return system_settings_form($form);
 }

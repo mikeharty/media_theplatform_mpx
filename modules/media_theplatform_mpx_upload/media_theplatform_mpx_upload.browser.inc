@@ -10,6 +10,8 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#collapsible' => FALSE,
     '#collapsed' => FALSE,
     '#description' => t('We should put some information here about the upload process.'),
+    '#prefix' => '<div id="scrollable">',
+    '#suffix' => '</div>',
   );
 
   $form['uploadform']['uploadtitle'] = array(
@@ -26,7 +28,6 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#description' => t('Allowed file types: ') . '<strong>3g2 3gp asf avi dv flv f4v m4v mov mp4 mpeg mpg mts m2ts qt wmv</strong>',
   );
 
-  // Fetch all distinct accounts from mpx_player.
   $account = media_theplatform_mpx_variable_get('import_account');
   $account_label = str_replace('%', '-', $account);
   $form['uploadform']['upload_player'] = array(
@@ -36,6 +37,13 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#default_value' => media_theplatform_mpx_variable_get('default_player_fid'),
     '#prefix' => '<span class="'.$account_label.'">',
     '#suffix' => '</span>',
+  );
+
+  $form['uploadform']['publish_profiles'] = array(
+    '#type' => 'select',
+    '#multiple' => 'true',
+    '#title' => t('Publishing Profiles:'),
+    '#options' => media_theplatform_mpx_upload_get_publishing_profiles(),
   );
 
   $form['uploadform']['upload'] = array(
@@ -50,7 +58,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
   $form['#prefix'] = '<div id="mpx-upload-form">';
   $form['#suffix'] = '</div>';
 
-  // Add media_theplatform_mpx browser javascript and CSS.
+  // Add media_theplatform_mpx_upload browser javascript and CSS.
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/media_theplatform_mpx.upload.js');
 
   return $form;
@@ -157,7 +165,9 @@ function _media_theplatform_mpx_upload_form_callback(&$form, $form_state) {
     'title' => $form_state['values']['uploadtitle'],
   );
 
-  $upload = media_theplatform_mpx_upload_video(drupal_realpath($file->uri), $meta, null);
+  $publishing_profiles = array_keys($form_state['values']['publish_profiles']);
+
+  $upload = media_theplatform_mpx_upload_video(drupal_realpath($file->uri), $meta, $publishing_profiles);
 
   if ($upload) {
     // Using an object here because it means when we check the result

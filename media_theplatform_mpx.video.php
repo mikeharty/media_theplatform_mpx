@@ -288,9 +288,9 @@ function media_theplatform_mpx_import_video($video) {
  * @return String
  *   Returns 'insert' for counters in media_theplatform_mpx_import_all_videos()
  */
-function media_theplatform_mpx_insert_video($video, $fid = NULL) {
+function media_theplatform_mpx_insert_video($video, $fid = NULL, $player_id = NULL) {
   $timestamp = REQUEST_TIME;
-  $player_id = media_theplatform_mpx_variable_get('default_player_fid');
+  $player_id = isset($player_id) ? $player_id : media_theplatform_mpx_variable_get('default_player_fid');
 
   // If file doesn't exist, write it to file_managed.
   if (!$fid) {

@@ -1,7 +1,7 @@
 <?php
 // Helper functions.
 include_once ('media_theplatform_mpx_upload.admin.inc');
-include_once ('media_theplatform_mpx_upload.form.inc');
+include_once ('media_theplatform_mpx_upload.browser.inc');
 include_once ('media_theplatform_mpx_upload.upload.inc');
 
 /**
@@ -66,4 +66,23 @@ function media_theplatform_mpx_upload_media_browser_plugin_info() {
     'class' => 'MediaThePlatformMpxMediaUpload',
   );
   return $info;
+}
+
+/**
+ * If auto-publish is turned on, publish videos in Drupal when they are
+ * finished publishing in MPX. Also creates a hook for other modules to act upon.
+ * @param $published_video
+ */
+function media_theplatform_mpx_upload_published($published_video) {
+  module_invoke_all('media_theplatform_mpx_upload_published', $published_video);
+}
+
+/**
+ * Implements hook_cron().
+ */
+function media_theplatform_mpx_upload_cron() {
+  // If the publishing watcher thread is running, make sure it's not stuck
+  if(media_theplatform_mpx_variable_get('publishing_watcher_running', 0)) {
+    _mpx_publishing_status_watcher_health_check();
+  }
 }

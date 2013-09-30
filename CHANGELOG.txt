@@ -1,3 +1,7 @@
+Media: thePlatform mpx 7.x-2.3
+------------------------------------------
+- Added submodule "upload" to enable uploading of mpxMedia assets to MPX
+
 Media: thePlatform mpx 7.x-2.2
 ------------------------------------------
 - Added hooks for Ctools custom content and embedding nodes in Panels.
