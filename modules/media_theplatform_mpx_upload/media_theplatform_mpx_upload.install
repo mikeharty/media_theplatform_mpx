@@ -17,6 +17,13 @@ function media_theplatform_mpx_upload_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
+      'guid' => array(
+        'description' => 'Guid in thePlatform',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'media_object_id' => array(
         'description' => 'MPX media object ID',
         'type' => 'varchar',

@@ -69,11 +69,38 @@ function media_theplatform_mpx_upload_media_browser_plugin_info() {
 }
 
 /**
- * If auto-publish is turned on, publish videos in Drupal when they are
+ * If auto-publish is turned on, publish nodes with MPX videos in Drupal when they are
  * finished publishing in MPX. Also creates a hook for other modules to act upon.
  * @param $published_video
  */
 function media_theplatform_mpx_upload_published($published_video) {
+  if(media_theplatform_mpx_variable_get('auto_publish', 0)) {
+    $guid = $published_video->guid;
+    // Fuzzy match for guid on uri field, this will catch all
+    // player+video combinations
+    $file_ids = db_select('file_managed', 'm')
+      ->fields('m', array('fid'))
+      ->condition('uri', '%'.$guid.'%', 'LIKE')
+      ->execute()
+      ->fetchAll();
+    // For player+video combo, find it's usage on nodes
+    foreach($file_ids as $file_id) {
+      $nodes = db_select('file_usage', 'f')
+        ->fields('f', array('id'))
+        ->condition('type', 'node', '=')
+        ->condition('fid', $file_id->fid, '=')
+        ->execute()
+        ->fetchAll();
+      // Publish each node
+      foreach($nodes as $node) {
+        $node = node_load($node->id);
+        node_publish_action($node);
+        node_save($node);
+        watchdog('media_theplatform_mpx_upload', 'Node "@title" automatically published by MPX.', array('@title' => $node->title), WATCHDOG_INFO);
+      }
+    }
+  }
+  // Allow other modules to hook at this point
   module_invoke_all('media_theplatform_mpx_upload_published', $published_video);
 }
 
@@ -82,7 +109,13 @@ function media_theplatform_mpx_upload_published($published_video) {
  */
 function media_theplatform_mpx_upload_cron() {
   // If the publishing watcher thread is running, make sure it's not stuck
-  if(media_theplatform_mpx_variable_get('publishing_watcher_running', 0)) {
+  $semaphore = db_select('semaphore', 's')
+    ->fields('s', array('value'))
+    ->condition('name', 'mpx_publishing_watcher_running', '=')
+    ->range(0,1)
+    ->execute()
+    ->fetchField();
+  if($semaphore) {
     _mpx_publishing_status_watcher_health_check();
   }
 }

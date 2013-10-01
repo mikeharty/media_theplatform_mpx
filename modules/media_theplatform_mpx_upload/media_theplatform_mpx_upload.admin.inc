@@ -12,7 +12,7 @@ function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
   if($upload_servers) {
     // Add an empty option to the front of the list
     array_unshift($upload_servers, t('- Select -'));
-    $form['upload']['upload-server'] = array(
+    $form['upload']['media_theplatform_mpx__upload_server'] = array(
       '#type' => 'select',
       '#title' => t('Upload server:'),
       '#requred' => true,
@@ -34,10 +34,10 @@ function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
     '#collapsed' => FALSE,
   );
 
-  $form['publishing']['auto-publish'] = array(
+  $form['publishing']['media_theplatform_mpx__auto_publish'] = array(
     '#type' => 'checkbox',
     '#title' => t('Publish nodes automatically when videos are finished publishing in MPX.'),
-    '#default_value' => media_theplatform_mpx_variable_get('upload_auto_publish', true),
+    '#default_value' => media_theplatform_mpx_variable_get('auto_publish', true),
   );
 
   return system_settings_form($form);

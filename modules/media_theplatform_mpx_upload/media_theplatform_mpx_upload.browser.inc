@@ -41,7 +41,8 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
 
   $form['uploadform']['publish_profiles'] = array(
     '#type' => 'select',
-    '#multiple' => 'true',
+    '#multiple' => true,
+    '#required' => true,
     '#title' => t('Publishing Profiles:'),
     '#options' => media_theplatform_mpx_upload_get_publishing_profiles(),
   );

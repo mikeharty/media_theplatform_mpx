@@ -115,6 +115,11 @@ function media_theplatform_mpx_add_player_head($fids) {
           drupal_add_html_head($element, $key);
         }
       }
+      media_theplatform_mpx_variable_set('enable_deep_link', 1);
+      // Add mpxPlayer seek JS, if enabled
+      if(media_theplatform_mpx_variable_get('enable_deep_link', 0)) {
+        drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx').'/js/media_theplatform_mpx.deeplink.js');
+      }
     }
   }
 }

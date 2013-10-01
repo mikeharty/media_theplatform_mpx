@@ -14,6 +14,7 @@ define('PUB_BASE', 'http://publish.theplatform.com');
 define('PD_BASE', 'http://data.publish.theplatform.com');
 // Workflow
 define('WF_BASE', 'http://data.workflow.theplatform.com');
+
 /**
  * Fetches a list of publishing profiles for the
  * currently selected MPX account.
@@ -144,12 +145,12 @@ function media_theplatform_mpx_upload_video($file_path, $meta, $publishing_profi
     }
 
     // Add the video to the upload queue
-    $mpx_queue_id = _mpx_uploads_insert($file_path, $media_object_id, $upload_server, $publishing_profiles);
+    $mpx_queue_id = _mpx_uploads_insert($media_object_guid, $file_path, $media_object_id, $upload_server, $publishing_profiles);
 
     $trigger_upload_worker = _mpx_upload_worker_trigger($mpx_queue_id);
     if($trigger_upload_worker['status'] == 'error') {
       drupal_set_message($trigger_upload_worker['response'], 'error');
-      watchdog('media_theplatform_mpx_upload', t('Unable to reach MPX Upload Worker Queue'), array(), WATCHDOG_ERROR);
+      watchdog('media_theplatform_mpx_upload', t('Unable to reach MPX Upload Queue Worker'), array(), WATCHDOG_ERROR);
       _mpx_uploads_status_update($mpx_queue_id, 'failed', $trigger_upload_worker['response']);
       return false;
     }
@@ -168,21 +169,24 @@ function media_theplatform_mpx_upload_video($file_path, $meta, $publishing_profi
 
 /**
  * Inserts an upload into the mpx_uploads table
+ * @param $guid
  * @param $file_path
  * @param $media_object_id
  * @param $upload_server
  * @param $publish_profiles
  * @return DatabaseStatementInterface|int|null
  */
-function _mpx_uploads_insert($file_path, $media_object_id, $upload_server, $publish_profiles) {
+function _mpx_uploads_insert($guid, $file_path, $media_object_id, $upload_server, $publish_profiles) {
+  $time = time();
   $mpx_queue_id = db_insert('mpx_uploads')
                     ->fields(array(
+                      'guid' => $guid,
                       'media_object_id' => $media_object_id,
                       'file_path' => $file_path,
                       'upload_server' => $upload_server,
                       'publish_profiles' => serialize($publish_profiles),
-                      'created' => REQUEST_TIME,
-                      'updated' => REQUEST_TIME,
+                      'created' => $time,
+                      'updated' => $time,
                     ))
                     ->execute();
 
@@ -267,16 +271,17 @@ function media_theplatform_mpx_upload_worker($mpx_queue_id) {
 }
 
 function _mpx_publishing_status_watcher() {
-  // Set a semaphore lock for the running state of this thread.
-  // This has an insanely high timeout, because videos can be added to the queue continuously
-  // from other threads. There is a safety check, which runs on cron, which will
-  // automatically fail any videos which have been publishing for > 6 hours, eventually
-  // releasing this thread.
-  if(lock_acquire('mpx_publishing_watcher_running', 432000)) {
-    watchdog('media_theplatform_mpx_upload', 'MPX Publishing Status Watcher thread started', array(), WATCHDOG_NOTICE);
-    if(media_theplatform_mpx_check_token()) {
-      $mpx_token = media_theplatform_mpx_variable_get('token');
-      $account_id = media_theplatform_mpx_variable_get('account_id');
+  if(media_theplatform_mpx_check_token()) {
+    $mpx_token = media_theplatform_mpx_variable_get('token');
+    $account_id = media_theplatform_mpx_variable_get('account_id');
+    // Set a semaphore lock for the running state of this thread.
+    // This has an insanely high timeout, because videos can be added to the queue continuously
+    // from other threads. There is a safety check, which runs on cron, which will
+    // automatically fail any videos which have been publishing for > 6 hours, eventually
+    // releasing this thread.
+    if(lock_acquire('mpx_publishing_watcher_running', 432000)) {
+      watchdog('media_theplatform_mpx_upload', 'MPX Publishing Status Watcher thread started', array(), WATCHDOG_NOTICE);
+
       while(1) {
         // Fetch all videos marked as "publishing" in the mpx_uploads table.
         // This is checked on each pass, so that videos added by separate threads
@@ -287,7 +292,7 @@ function _mpx_publishing_status_watcher() {
           ->execute()
           ->fetchAll();
 
-        // If we found videos, check their publishing status and fire any hooks for published videos
+        // Call the ProfileResult endpoint for each video
         if(count($publishing_videos)) {
           foreach($publishing_videos as $publishing_video) {
             $media_object_id = $publishing_video->media_object_id;
@@ -298,35 +303,46 @@ function _mpx_publishing_status_watcher() {
             $response = curl_exec($ch);
             $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
-            // This function doesn't return anything, so we need these nested if-else blocks
+
             $responseCode = _mpx_check_curl_response_code($url, $responseCode);
             if($responseCode['status'] == 'error') {
               watchdog('media_theplatform_mpx_upload', $responseCode['response'], array(), WATCHDOG_ERROR);
               _mpx_uploads_status_update($publishing_video->id, 'failed', $responseCode['response']);
-            } else {
-              $response =  _mpx_check_json_response($response, 'ProfileResult');
-              if($response['status'] == 'error') {
-                watchdog('media_theplatform_mpx_upload', $response['response'], array(), WATCHDOG_ERROR);
-                _mpx_uploads_status_update($publishing_video->id, 'failed', $response['response']);
-              } else {
-                $publishing_profiles = $response['response']->entries;
-                foreach($publishing_profiles as $publishing_profile) {
-                  $status = $publishing_profile->{'plprofileresult$status'};
-                  $failure_statuses = array('ProcessingError', 'NotProcessed', 'Revoking', 'Revoked', 'RevokingError', 'NotRevoked');
-                  if(in_array($status, $failure_statuses)) {
-                    $error_msg = t('MPX publishing error mediaId: @media_id, profileId: @profile_id, statusInfo: @status_info', array(
-                      '@status' => $status,
-                      '@media_id' => $media_object_id,
-                      '@profile_id' => $publishing_profile->{'plprofileresult$profileId'},
-                      '@status_info' => $publishing_profile->{'plprofileresult$statusInfo'}));
-                    watchdog('media_theplatform_mpx_upload', $error_msg, array(), WATCHDOG_ERROR);
-                    _mpx_uploads_status_update($publishing_video->id, 'failed', $error_msg);
-                    // exit the loop for this video if we failed
-                    break 2;
-                  } else if($status == 'Processed') {
-                    _mpx_uploads_status_update($publishing_video->id, 'finished');
-                    media_theplatform_mpx_upload_published($publishing_video);
-                  }
+              break;
+            }
+
+            $response =  _mpx_check_json_response($response, 'ProfileResult');
+            if($response['status'] == 'error') {
+              watchdog('media_theplatform_mpx_upload', $response['response'], array(), WATCHDOG_ERROR);
+              _mpx_uploads_status_update($publishing_video->id, 'failed', $response['response']);
+              break;
+            }
+
+            // Inspect each of the publishing profile statuses
+            $publishing_profiles = $response['response']->entries;
+            $num_publishing_profiles = count($publishing_profiles);
+            $num_published = 0;
+            foreach($publishing_profiles as $publishing_profile) {
+              $status = $publishing_profile->{'plprofileresult$status'};
+              $failure_statuses = array('ProcessingError', 'NotProcessed', 'Revoking', 'Revoked', 'RevokingError', 'NotRevoked');
+              if(in_array($status, $failure_statuses)) {
+                $error_msg = t('MPX publishing error: mediaId: @media_id, profileId: @profile_id, statusInfo: @status_info', array(
+                  '@status' => $status,
+                  '@media_id' => $media_object_id,
+                  '@profile_id' => $publishing_profile->{'plprofileresult$profileId'},
+                  '@status_info' => $publishing_profile->{'plprofileresult$statusInfo'}));
+                watchdog('media_theplatform_mpx_upload', $error_msg, array(), WATCHDOG_ERROR);
+                _mpx_uploads_status_update($publishing_video->id, 'failed', $error_msg);
+                // if any publishing profile failed, break the loop for this video
+                break 2;
+              } else if($status == 'Processed') {
+                // check if all publishing profiles have processed,
+                // if so, update the status of the video to finished and
+                // trigger the upload publishing finished function.
+                $num_published++;
+                if($num_published == $num_publishing_profiles-1) {
+                  _mpx_uploads_status_update($publishing_video->id, 'finished');
+                  media_theplatform_mpx_upload_published($publishing_video);
                 }
               }
             }
@@ -340,10 +356,12 @@ function _mpx_publishing_status_watcher() {
         }
       }
     } else {
-      watchdog('media_theplatform_mpx_upload', 'Unable to sign in to MPX account when attempting to poll the publishing status of uploaded videos.', array(), WATCHDOG_ERROR);
+      // Unable to acquire lock, a watcher is already running, exit
+      die();
     }
   } else {
-    die();
+    // Unable to log in, report error
+    watchdog('media_theplatform_mpx_upload', 'Unable to sign in to MPX account when attempting to poll the publishing status of uploaded videos.', array(), WATCHDOG_ERROR);
   }
 }
 
