@@ -7,6 +7,5 @@ dependencies[] = media
 dependencies[] = media_internet
 dependencies[] = file_entity
 dependencies[] = media_theplatform_mpx
-dependencies[] = httprl
 
 configure = admin/config/media/theplatform/upload

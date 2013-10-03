@@ -3,6 +3,13 @@
  * Checks for a hash time code in the URL and seeks any
  * player on the page to that time when playback begins.
  * e.g. #t=2m or #t=2m30s or #t=120s
+ *
+ * This is a bit fragile because the pdk functions require a
+ * scope id, which happens to be the same as the player ID, but is
+ * removed from DOM at some point by the rendering JS. So, this pulls
+ * the player ID and uses that instead. The major concern here is that if
+ * we implement a different method of rendering the player (iframe, js),
+ * this will probably break.
  */
 
 (function ($) {
@@ -42,7 +49,6 @@
       var originatorControlId = evt.originator.controlId;
       var scope = originatorControlId.substring(7);
       var seek = Drupal.behaviors.mediaMpxDeepLink.scopeSeeks[scope];
-      console.log(seek);
       $pdk.controller.seekToPosition(seek, ["scope-"+scope]);
     }
   }

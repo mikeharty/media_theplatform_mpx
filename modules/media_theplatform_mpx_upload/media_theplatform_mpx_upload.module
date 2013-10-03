@@ -54,6 +54,14 @@ function media_theplatform_mpx_upload_menu() {
     'access arguments' => array('access content'),
   );
 
+  $items['admin/content/file/mpxuploads'] = array(
+    'title' => t('MPX Upload Status'),
+    'description' => '',
+    'page callback' => 'media_theplatform_mpx_upload_list',
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array('access content'),
+  );
+
   return $items;
 }
 
@@ -74,21 +82,23 @@ function media_theplatform_mpx_upload_media_browser_plugin_info() {
  * @param $published_video
  */
 function media_theplatform_mpx_upload_published($published_video) {
+  $nodes = array();
+  $files = array();
   if(media_theplatform_mpx_variable_get('auto_publish', 0)) {
     $guid = $published_video->guid;
     // Fuzzy match for guid on uri field, this will catch all
     // player+video combinations
-    $file_ids = db_select('file_managed', 'm')
+    $files = db_select('file_managed', 'm')
       ->fields('m', array('fid'))
       ->condition('uri', '%'.$guid.'%', 'LIKE')
       ->execute()
       ->fetchAll();
     // For player+video combo, find it's usage on nodes
-    foreach($file_ids as $file_id) {
+    foreach($files as $file) {
       $nodes = db_select('file_usage', 'f')
         ->fields('f', array('id'))
         ->condition('type', 'node', '=')
-        ->condition('fid', $file_id->fid, '=')
+        ->condition('fid', $file->fid, '=')
         ->execute()
         ->fetchAll();
       // Publish each node
@@ -101,13 +111,29 @@ function media_theplatform_mpx_upload_published($published_video) {
     }
   }
   // Allow other modules to hook at this point
-  module_invoke_all('media_theplatform_mpx_upload_published', $published_video);
+  //@todo: Document this
+  module_invoke_all('media_theplatform_mpx_upload_published', $published_video, $nodes, $files);
 }
 
 /**
  * Implements hook_cron().
  */
 function media_theplatform_mpx_upload_cron() {
+  // Start the publishing watcher, it will automatically exit if another
+  // is already running
+  if(!module_exists('httprl')) {
+    // Fetch upload queue item
+    $upload_items = db_select('mpx_uploads', 'q')
+      ->fields('q')
+      ->condition('status', 'new', '=')
+      ->execute()
+      ->fetchAll();
+
+    foreach($upload_items as $upload_item) {
+      media_theplatform_mpx_upload_worker($upload_item->id);
+    }
+  }
+
   // If the publishing watcher thread is running, make sure it's not stuck
   $semaphore = db_select('semaphore', 's')
     ->fields('s', array('value'))
@@ -118,4 +144,18 @@ function media_theplatform_mpx_upload_cron() {
   if($semaphore) {
     _mpx_publishing_status_watcher_health_check();
   }
+}
+
+/**
+ * Checks whether stream functions required for non-blocking
+ * http requests are available on the server.
+ */
+function media_theplatform_mpx_upload_check_stream_availability() {
+  $required_functions = array('stream_socket_client', 'stream_select', 'stream_set_blocking', 'stream_socket_get_name', 'stream_get_meta_data');
+  $disabled_functions = array_map('trim',explode(', ', ini_get('disable_functions')));
+  foreach($required_functions as $required_function) {
+    if(!function_exists($required_function) || in_array($required_function, $disabled_functions))
+      return false;
+  }
+  return true;
 }

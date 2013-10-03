@@ -24,6 +24,13 @@ function media_theplatform_mpx_upload_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'title' => array(
+        'description' => 'Video title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''
+      ),
       'media_object_id' => array(
         'description' => 'MPX media object ID',
         'type' => 'varchar',
@@ -76,6 +83,29 @@ function media_theplatform_mpx_upload_schema() {
     'primary key' => array('id'),
   );
   return $schema;
+}
+
+/**
+ * Implements hook_requirements().
+ */
+function media_theplatform_mpx_upload_requirements($phase) {
+  $response = array();
+  switch ($phase) {
+    case 'install':
+      return $response;
+    case 'runtime':
+      $response['title'] = 'Media: The Platform MPX Upload';
+      $response['value'] = t('OK');
+      $response['severity'] = REQUIREMENT_OK;
+      if (ini_get('safe_mode')) {
+        $response['severity'] = REQUIREMENT_WARNING;
+        $response['value'] = t('Safe mode enabled');
+        $response['description'] =  t('Safe mode enabled. Media: The Platform MPX Upload is unable to control maximum execution time for upload processes. This may cause uploads to end prematurely. <a href="@link">Click here</a> to read more about safe mode.', array('@link' => 'http://php.net/manual/en/features.safe-mode.php'));
+      }
+      $result = array();
+      $result['media_theplatform_mpx_upload'] = $response;
+      return $result;
+  }
 }
 
 /**

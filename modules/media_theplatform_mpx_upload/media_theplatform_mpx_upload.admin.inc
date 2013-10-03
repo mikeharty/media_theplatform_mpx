@@ -42,3 +42,36 @@ function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
 
   return system_settings_form($form);
 }
+
+function media_theplatform_mpx_upload_list() {
+  $header = array('ID', 'File', 'Title', 'Created', 'Updated', 'Status', 'Status Message');
+  $rows = array();
+
+  $uploads = db_select('mpx_uploads', 'q')
+    ->fields('q')
+    ->orderBy('created', 'DESC')
+    ->execute()
+    ->fetchAll();
+
+  if(count($uploads)) {
+    foreach($uploads as $upload) {
+      $rows[] = array(
+        $upload->id,
+        $upload->file_path,
+        $upload->title,
+        date("Y-m-d H:i:s", $upload->created),
+        date("Y-m-d H:i:s", $upload->updated),
+        $upload->status,
+        $upload->message
+      );
+    }
+  }
+  $table_element = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
+    '#empty' =>t('No uploads tracked.'),
+  );
+
+  return drupal_render($table_element);
+}

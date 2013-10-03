@@ -16,6 +16,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
 
   $form['uploadform']['uploadtitle'] = array(
     '#type' => 'textfield',
+    '#required' => true,
     '#title' => t('Title'),
     '#description' => t('Video name or title.'),
     '#default_value' => !empty($form_state['values']['title']) ? $form_state['values']['title'] : '',

@@ -14,7 +14,6 @@ class MediaThePlatformMpxMediaUpload extends MediaBrowserPlugin {
    * Implements MediaBrowserPluginInterface::access().
    */
   public function access($account = NULL) {
-    // @todo Replace with file_access().
     return media_access('edit', $account);
   }
 

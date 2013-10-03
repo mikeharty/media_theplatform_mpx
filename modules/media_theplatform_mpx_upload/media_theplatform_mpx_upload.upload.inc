@@ -114,21 +114,21 @@ function media_theplatform_mpx_upload_get_servers() {
 /**
  * Wrapper function to execute a file upload to MPX.
  * Creates the media object in MPX and triggers the background
- * upload worker.
+ * upload worker if httprl is enabled.
  * @param $file_path
  * @param $meta
  * @param $publishing_profiles
  * @return bool|stdClass
  */
 function media_theplatform_mpx_upload_video($file_path, $meta, $publishing_profiles) {
+  // Check that an upload server has been configured
+  if(!$upload_server = media_theplatform_mpx_variable_get('upload_server')) {
+    drupal_set_message(t('Please <a href="@mpxpathadmin">set an upload server</a> to upload media.', array('@mpxpathadmin' => MPX_PATH_ADMIN)), 'error');
+    return false;
+  }
+
   // Check that we have a valid token (this will attempt to create one if we don't)
   if(media_theplatform_mpx_check_token()) {
-    // Check that an upload server has been configured
-    if(!$upload_server = media_theplatform_mpx_variable_get('upload_server')) {
-      drupal_set_message(t('Please <a href="@mpxpathadmin">set an upload server</a> to upload media.', array('@mpxpathadmin' => MPX_PATH_ADMIN)), 'error');
-      return false;
-    }
-
     // We checked that we have a valid token so these should be set
     $mpx_token = media_theplatform_mpx_variable_get('token');
     $account_id = media_theplatform_mpx_variable_get('account_id');
@@ -145,17 +145,20 @@ function media_theplatform_mpx_upload_video($file_path, $meta, $publishing_profi
     }
 
     // Add the video to the upload queue
-    $mpx_queue_id = _mpx_uploads_insert($media_object_guid, $file_path, $media_object_id, $upload_server, $publishing_profiles);
+    $mpx_queue_id = _mpx_uploads_insert($media_object_guid, $file_path, $media_object_id, $upload_server, $publishing_profiles, $meta->title);
 
-    $trigger_upload_worker = _mpx_upload_worker_trigger($mpx_queue_id);
-    if($trigger_upload_worker['status'] == 'error') {
-      drupal_set_message($trigger_upload_worker['response'], 'error');
-      watchdog('media_theplatform_mpx_upload', t('Unable to reach MPX Upload Queue Worker'), array(), WATCHDOG_ERROR);
-      _mpx_uploads_status_update($mpx_queue_id, 'failed', $trigger_upload_worker['response']);
-      return false;
+    // If the HTTPRL module is enabled, trigger a non-blocking
+    // request to the upload worker. If not, it will have to wait for cron.
+    if(module_exists('httprl')) {
+      $trigger_upload_worker = _mpx_upload_worker_trigger($mpx_queue_id);
+      if($trigger_upload_worker['status'] == 'error') {
+        drupal_set_message($trigger_upload_worker['response'], 'error');
+        watchdog('media_theplatform_mpx_upload', t('Unable to reach MPX Upload Queue Worker. Will attempt upload on next cron run.'), array(), WATCHDOG_ERROR);
+        return false;
+      }
     }
 
-    // Create a base media object to return to the media browser
+    // Create a basic media object to return to the media browser
     $response = new stdClass();
     $response->guid = $media_object_guid;
     $response->id = $media_object_id;
@@ -174,15 +177,17 @@ function media_theplatform_mpx_upload_video($file_path, $meta, $publishing_profi
  * @param $media_object_id
  * @param $upload_server
  * @param $publish_profiles
+ * @param $title
  * @return DatabaseStatementInterface|int|null
  */
-function _mpx_uploads_insert($guid, $file_path, $media_object_id, $upload_server, $publish_profiles) {
+function _mpx_uploads_insert($guid, $file_path, $media_object_id, $upload_server, $publish_profiles, $title) {
   $time = time();
   $mpx_queue_id = db_insert('mpx_uploads')
                     ->fields(array(
                       'guid' => $guid,
                       'media_object_id' => $media_object_id,
                       'file_path' => $file_path,
+                      'title' => $title,
                       'upload_server' => $upload_server,
                       'publish_profiles' => serialize($publish_profiles),
                       'created' => $time,
@@ -228,12 +233,12 @@ function media_theplatform_mpx_upload_worker($mpx_queue_id) {
   if(media_theplatform_mpx_check_token()) {
     $mpx_token = media_theplatform_mpx_variable_get('token');
     $account_id = media_theplatform_mpx_variable_get('account_id');
-
-    // Fetch upload queue item
+    // Update status of upload item in queue
+    _mpx_uploads_status_update($mpx_queue_id, 'uploading');
+    // Fetch upload item fields
     $upload = db_select('mpx_uploads', 'q')
               ->fields('q')
               ->condition('id', $mpx_queue_id, '=')
-              ->condition('status', 'new', '=')
               ->execute()
               ->fetchAll();
     $upload = $upload[0];
@@ -241,9 +246,6 @@ function media_theplatform_mpx_upload_worker($mpx_queue_id) {
     $media_object_id = $upload->media_object_id;
     $upload_server = $upload->upload_server;
     $publish_profiles = unserialize($upload->publish_profiles);
-
-    // Update status of upload item in queue
-    _mpx_uploads_status_update($mpx_queue_id, 'uploading');
 
     // Start the upload process, this is synchronous so this thread will be blocked
     $upload = _mpx_upload_video($file_path, $media_object_id, $account_id, $mpx_token, $upload_server);
@@ -275,13 +277,11 @@ function _mpx_publishing_status_watcher() {
     $mpx_token = media_theplatform_mpx_variable_get('token');
     $account_id = media_theplatform_mpx_variable_get('account_id');
     // Set a semaphore lock for the running state of this thread.
-    // This has an insanely high timeout, because videos can be added to the queue continuously
+    // This has a very high timeout, because videos can be added to the queue continuously
     // from other threads. There is a safety check, which runs on cron, which will
     // automatically fail any videos which have been publishing for > 6 hours, eventually
     // releasing this thread.
     if(lock_acquire('mpx_publishing_watcher_running', 432000)) {
-      watchdog('media_theplatform_mpx_upload', 'MPX Publishing Status Watcher thread started', array(), WATCHDOG_NOTICE);
-
       while(1) {
         // Fetch all videos marked as "publishing" in the mpx_uploads table.
         // This is checked on each pass, so that videos added by separate threads
@@ -308,14 +308,14 @@ function _mpx_publishing_status_watcher() {
             if($responseCode['status'] == 'error') {
               watchdog('media_theplatform_mpx_upload', $responseCode['response'], array(), WATCHDOG_ERROR);
               _mpx_uploads_status_update($publishing_video->id, 'failed', $responseCode['response']);
-              break;
+              continue;
             }
 
             $response =  _mpx_check_json_response($response, 'ProfileResult');
             if($response['status'] == 'error') {
               watchdog('media_theplatform_mpx_upload', $response['response'], array(), WATCHDOG_ERROR);
               _mpx_uploads_status_update($publishing_video->id, 'failed', $response['response']);
-              break;
+              continue;
             }
 
             // Inspect each of the publishing profile statuses
@@ -334,30 +334,31 @@ function _mpx_publishing_status_watcher() {
                 watchdog('media_theplatform_mpx_upload', $error_msg, array(), WATCHDOG_ERROR);
                 _mpx_uploads_status_update($publishing_video->id, 'failed', $error_msg);
                 // if any publishing profile failed, break the loop for this video
-                break 2;
+                break;
               } else if($status == 'Processed') {
                 // check if all publishing profiles have processed,
                 // if so, update the status of the video to finished and
                 // trigger the upload publishing finished function.
-                $num_published++;
                 if($num_published == $num_publishing_profiles-1) {
                   _mpx_uploads_status_update($publishing_video->id, 'finished');
                   media_theplatform_mpx_upload_published($publishing_video);
+                  break;
                 }
+                $num_published++;
               }
             }
           }
-          // Wait 2 minutes before checking again
-          sleep(120);
+          // Wait 30 seconds before checking again
+          sleep(30);
         } else {
           // Release lock and exit if everything is published (or failed)
           lock_release('mpx_publishing_watcher_running');
-          die();
+          break;
         }
       }
     } else {
-      // Unable to acquire lock, a watcher is already running, exit
-      die();
+      // Unable to acquire lock, a watcher is already running, do nothing
+      return;
     }
   } else {
     // Unable to log in, report error
@@ -368,6 +369,7 @@ function _mpx_publishing_status_watcher() {
 /**
  * Runs on cron, will ensure that the publishing status watch isn't stuck,
  * and if it is, will set any videos which have been stuck for > 6 hours to failed
+ * @todo: make timeout config variable
  */
 function _mpx_publishing_status_watcher_health_check() {
   $publishing_videos = db_select('mpx_uploads', 'q')
@@ -496,7 +498,6 @@ function _mpx_upload_video($file_path, $media_object_id, $account_id, $mpx_token
   // Prepare the file info
   $file_size = filesize($file_path);
   $path_parts = pathinfo($file_path);
-  $file_name = $path_parts['filename'].'.'.$path_parts['extension'];
   $file_extension = $path_parts['extension'];
 
   // MPX provides a list of file type titles via an XML file
@@ -781,25 +782,28 @@ function _mpx_finish_upload($upload_server, $cookie_file, $mpx_token, $account_i
 }
 
 /**
- * Finds the MPX valid format name for a file extension
+ * Finds the MPX-valid format name for a file extension
  * @param $extension
  * @return array
  */
 function _mpx_format($extension) {
   $mpx_format = null;
-  // @todo: Cache this XML file
-  $formats_XML = simplexml_load_file('http://web.theplatform.com/descriptors/enums/format.xml');
-  foreach($formats_XML->format as $format) {
-    foreach($format->extensions->extension as $ext) {
-      if($extension == $ext) {
-        $mpx_format = $format->title;
-        break;
+  if(!$formats = cache_get('mpx_upload:xml_formats')) {
+    $formats_XML = simplexml_load_file('http://web.theplatform.com/descriptors/enums/format.xml');
+    $formats = array();
+    foreach($formats_XML->format as $format) {
+      foreach($format->extensions->extension as $ext) {
+        $formats[(string) $ext] = (string) $format->title;
       }
     }
-    if($mpx_format != null)
-      return array('status' => 'success', 'response' => $mpx_format);
+    cache_set('mpx_upload:xml_formats', $formats);
+  } else {
+    $formats = $formats->data;
   }
-  return array('status' => 'error', 'response' => t('MPX format not found for extension: @extension', array('@extension' => $extension)));
+  if(isset($formats[$extension]))
+    return array('status' => 'success', 'response' => $mpx_format);
+  else
+    return array('status' => 'error', 'response' => t('MPX format not found for extension: @extension', array('@extension' => $extension)));
 }
 
 /**
