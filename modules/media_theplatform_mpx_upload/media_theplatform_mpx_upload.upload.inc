@@ -1,19 +1,15 @@
 <?php
 // Base URLs for MPX endpoints
-// Identity management
-define('IM_BASE', 'https://identity.auth.theplatform.com/idm');
 // File management
-define('FM_BASE', 'http://fms.theplatform.com');
-// Media data
-define('MD_BASE', 'http://data.media.theplatform.com');
+define('MPX_MPX_FM_BASE', 'http://fms.theplatform.com');;
 // Access/auth
-define('AC_BASE', 'http://access.auth.theplatform.com');
+define('MPX_AC_BASE', 'http://access.auth.theplatform.com');
 // Publish
-define('PUB_BASE', 'http://publish.theplatform.com');
+define('MPX_PUB_BASE', 'http://publish.theplatform.com');
 // Publishing data
-define('PD_BASE', 'http://data.publish.theplatform.com');
+define('MPX_PD_BASE', 'http://data.publish.theplatform.com');
 // Workflow
-define('WF_BASE', 'http://data.workflow.theplatform.com');
+define('MPX_WF_BASE', 'http://data.workflow.theplatform.com');
 
 /**
  * Fetches a list of publishing profiles for the
@@ -24,7 +20,7 @@ function media_theplatform_mpx_upload_get_publishing_profiles() {
   if(media_theplatform_mpx_check_token()) {
     $mpx_token = media_theplatform_mpx_variable_get('token');
     $account_id = media_theplatform_mpx_variable_get('account_id');
-    $url = PD_BASE.'/publish/data/PublishProfile?range=1-100&sort=title&count=true&token='.$mpx_token.'&account='.$account_id.'&schema=1.7.0&fields=description%2Cguid%2Cid%2Ctitle%2Cupdated%2Cadded%2CaddedByUserId%2Clocked%2CownerId%2CupdatedByUserId%2Cversion%2Cplprofile%24disabled%2Cplprofile%24fileTargetCount%2Cplprofile%24outletProfileIds%2Cplprofile%24publishProfileIds&form=json';
+    $url = MPX_PD_BASE.'/publish/data/PublishProfile?range=1-100&sort=title&count=true&token='.$mpx_token.'&account='.$account_id.'&schema=1.7.0&fields=description%2Cguid%2Cid%2Ctitle%2Cupdated%2Cadded%2CaddedByUserId%2Clocked%2CownerId%2CupdatedByUserId%2Cversion%2Cplprofile%24disabled%2Cplprofile%24fileTargetCount%2Cplprofile%24outletProfileIds%2Cplprofile%24publishProfileIds&form=json';
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -33,13 +29,13 @@ function media_theplatform_mpx_upload_get_publishing_profiles() {
     curl_close($ch);
 
     // Check for valid cURL response
-    $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+    $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
     if($responseCode['status'] == 'error') {
       drupal_set_message($responseCode['response'], 'error');
       return false;
     }
 
-    $response = _mpx_check_json_response($response, 'getPublishingProfiles');
+    $response = media_theplatform_mpx_check_json_response($response, 'getPublishingProfiles');
     if($response['status'] == 'error') {
       drupal_set_message($response['response'], 'error');
       return false;
@@ -72,7 +68,7 @@ function media_theplatform_mpx_upload_get_servers() {
   if(media_theplatform_mpx_check_token()) {
     $mpx_token = media_theplatform_mpx_variable_get('token');
     $account_id = media_theplatform_mpx_variable_get('account_id');
-    $url = MD_BASE.'/media/data/Server?sort=title&byOwnerId='.$account_id.'&count=true&token='.$mpx_token.'&schema=1.0&fields=plserver%24disabled%2Clocked%2Ctitle%2Cid&form=json';
+    $url = MPX_MD_BASE.'/media/data/Server?sort=title&byOwnerId='.$account_id.'&count=true&token='.$mpx_token.'&schema=1.0&fields=plserver%24disabled%2Clocked%2Ctitle%2Cid&form=json';
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -80,13 +76,13 @@ function media_theplatform_mpx_upload_get_servers() {
     $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+    $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
     if($responseCode['status'] == 'error') {
       drupal_set_message($responseCode['response'], 'error');
       return false;
     }
 
-    $response = _mpx_check_json_response($response, 'getUploadServer');
+    $response = media_theplatform_mpx_check_json_response($response, 'getUploadServer');
     if($response['status'] == 'error') {
       drupal_set_message($response['response'], 'error');
       return false;
@@ -296,7 +292,7 @@ function _mpx_publishing_status_watcher() {
         if(count($publishing_videos)) {
           foreach($publishing_videos as $publishing_video) {
             $media_object_id = $publishing_video->media_object_id;
-            $url = WF_BASE.'/workflow/data/ProfileResult?byMediaId='.$media_object_id.'&byService=publish%7Csharing&token='.$mpx_token.'&account='.$account_id.'&schema=1.0&fields=plprofileresult%24status%2Cplprofileresult%24statusInfo%2Cplprofileresult%24validationErrors%2Cplprofileresult%24profileId&form=json';
+            $url = MPX_WF_BASE.'/workflow/data/ProfileResult?byMediaId='.$media_object_id.'&byService=publish%7Csharing&token='.$mpx_token.'&account='.$account_id.'&schema=1.0&fields=plprofileresult%24status%2Cplprofileresult%24statusInfo%2Cplprofileresult%24validationErrors%2Cplprofileresult%24profileId&form=json';
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -304,14 +300,14 @@ function _mpx_publishing_status_watcher() {
             $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+            $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
             if($responseCode['status'] == 'error') {
               watchdog('media_theplatform_mpx_upload', $responseCode['response'], array(), WATCHDOG_ERROR);
               _mpx_uploads_status_update($publishing_video->id, 'failed', $responseCode['response']);
               continue;
             }
 
-            $response =  _mpx_check_json_response($response, 'ProfileResult');
+            $response =  media_theplatform_mpx_check_json_response($response, 'ProfileResult');
             if($response['status'] == 'error') {
               watchdog('media_theplatform_mpx_upload', $response['response'], array(), WATCHDOG_ERROR);
               _mpx_uploads_status_update($publishing_video->id, 'failed', $response['response']);
@@ -397,7 +393,7 @@ function _mpx_publish_media($media_object_id, $publish_profiles) {
     $mpx_token = media_theplatform_mpx_variable_get('token');
     $account_id = media_theplatform_mpx_variable_get('account_id');
     foreach($publish_profiles as $publish_profile) {
-      $url = PUB_BASE.'/web/Publish/publish?form=JSON&schema=1.2&token='.$mpx_token.'&account='.$account_id.'&_mediaId='.$media_object_id.'&_profileId='.$publish_profile;
+      $url = MPX_PUB_BASE.'/web/Publish/publish?form=JSON&schema=1.2&token='.$mpx_token.'&account='.$account_id.'&_mediaId='.$media_object_id.'&_profileId='.$publish_profile;
       $ch = curl_init($url);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -405,12 +401,12 @@ function _mpx_publish_media($media_object_id, $publish_profiles) {
       $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
       curl_close($ch);
 
-      $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+      $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
       if($responseCode['status'] == 'error') {
         return $responseCode;
       }
 
-      $response =  _mpx_check_json_response($response, 'publishMedia');
+      $response =  media_theplatform_mpx_check_json_response($response, 'publishMedia');
       if($response['status'] == 'error')
         return $response;
     }
@@ -467,7 +463,7 @@ function _mpx_create_media_object($account_id, $mpx_token, $meta) {
      ]
   }';
 
-  $url = MD_BASE.'/media/data/Media/list?schema=1.2&form=json&account='.$account_id.'&token='.$mpx_token;
+  $url = MPX_MD_BASE.'/media/data/Media/list?schema=1.2&form=json&account='.$account_id.'&token='.$mpx_token;
   $ch = curl_init($url);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($ch, CURLOPT_POST, 1);
@@ -477,12 +473,12 @@ function _mpx_create_media_object($account_id, $mpx_token, $meta) {
   $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   curl_close($ch);
 
-  $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+  $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
   if($responseCode['status'] == 'error') {
     return $responseCode;
   }
 
-  return _mpx_check_json_response($response, 'CreateMediaObject');
+  return media_theplatform_mpx_check_json_response($response, 'CreateMediaObject');
 }
 
 /**
@@ -562,7 +558,7 @@ function _mpx_upload_video($file_path, $media_object_id, $account_id, $mpx_token
 function _mpx_random_upload_server($account_id, $mpx_token, $upload_server_id) {
   // Get a list of available upload servers
   // Pick one at random for pseudo load balancing
-  $url = FM_BASE.'/web/FileManagement/getUploadUrls?form=JSON&schema=1.4&token='.$mpx_token.'&account='.$account_id.'&_serverId='.$upload_server_id;
+  $url = MPX_FM_BASE.'/web/FileManagement/getUploadUrls?form=JSON&schema=1.4&token='.$mpx_token.'&account='.$account_id.'&_serverId='.$upload_server_id;
   $ch = curl_init($url);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -570,11 +566,11 @@ function _mpx_random_upload_server($account_id, $mpx_token, $upload_server_id) {
   $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   curl_close($ch);
 
-  $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+  $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
   if($responseCode['status'] == 'error') {
     return $responseCode;
   }
-  $response =  _mpx_check_json_response($response, 'getUploadUrls');
+  $response =  media_theplatform_mpx_check_json_response($response, 'getUploadUrls');
   if($response['status'] == 'error')
     return $response;
   else {
@@ -603,7 +599,7 @@ function _mpx_initialize_upload_session($upload_server) {
   $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   curl_close($ch);
 
-  $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+  $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
   if($responseCode['status'] == 'error') {
     return $responseCode;
   }
@@ -639,13 +635,13 @@ function _mpx_prepare_upload($upload_server, $cookie_file, $mpx_token, $account_
   $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   curl_close($ch);
 
-  $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+  $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
   if($responseCode['status'] == 'error') {
     return $responseCode;
   }
 
   // If successful, this will return empty
-  $response = _mpx_check_empty_response($response, 'startUpload');
+  $response = media_theplatform_mpx_check_empty_response($response, 'startUpload');
   if($response['status'] == 'error')
     return $response;
 
@@ -662,12 +658,12 @@ function _mpx_prepare_upload($upload_server, $cookie_file, $mpx_token, $account_
     $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+    $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
     if($responseCode['status'] == 'error') {
       return $responseCode;
     }
 
-    $response = _mpx_check_json_response($response, 'UploadStatus');
+    $response = media_theplatform_mpx_check_json_response($response, 'UploadStatus');
     if($response['status'] == 'error')
       return $response;
     $state = $response['response']->entries[0]->state;
@@ -729,13 +725,13 @@ function _mpx_upload_video_file($upload_server, $cookie_file, $file_path, $accou
     $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+    $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
     if($responseCode['status'] == 'error') {
       return $responseCode;
     }
 
     // This should return empty
-    $response = _mpx_check_empty_response($response, 'uploadFragment');
+    $response = media_theplatform_mpx_check_empty_response($response, 'uploadFragment');
     if($response['status'] == 'error')
       return $response;
 
@@ -772,13 +768,13 @@ function _mpx_finish_upload($upload_server, $cookie_file, $mpx_token, $account_i
   $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   curl_close($ch);
 
-  $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+  $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
   if($responseCode['status'] == 'error') {
     return $responseCode;
   }
 
   // Should return nothing
-  return _mpx_check_empty_response($resp, 'finishUpload');
+  return media_theplatform_mpx_check_empty_response($resp, 'finishUpload');
 }
 
 /**
@@ -830,12 +826,12 @@ function _mpx_get_uploaded_file_id($upload_server, $cookie_file, $account_id, $m
     $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    $responseCode = _mpx_check_curl_response_code($url, $responseCode);
+    $responseCode = media_theplatform_mpx_check_curl_response_code($url, $responseCode);
     if($responseCode['status'] == 'error') {
       return $responseCode;
     }
 
-    $response = _mpx_check_json_response($response, 'UploadStatus');
+    $response = media_theplatform_mpx_check_json_response($response, 'UploadStatus');
     if($response['status'] == 'error')
       return $response;
     else
@@ -858,58 +854,4 @@ function _mpx_get_uploaded_file_id($upload_server, $cookie_file, $account_id, $m
     }
   }
   return array('status' => 'success', 'response' => $uploaded_file_id);
-}
-
-/**
- * Checks for a valid JSON response from an MPX API call
- * @param $response
- * @param $service
- * @return array
- */
-function _mpx_check_json_response($response, $service) {
-  // No response
-  if(!strlen($response))
-    return array('status' => 'error', 'response' => t('No response from @service', array('@service', $service)));
-  // Decode JSON
-  $responseObject = json_decode($response);
-  // Make sure the response decodes, if not, return it's text
-  if(!is_object($responseObject))
-    return array('status' => 'error', 'response' => t('Error response from @service: @response', array('@service' => $service, '@response' => $response)));
-  // Check for an exception on the response, return it's description if set
-  if(property_exists($responseObject, 'isException'))
-    return array('status' => 'error', 'response' => t('Exception from @service: @response', array('@service' => $service, '@response' => $responseObject->description)));
-  // Looking good, return the response object
-  else
-    return array('status' => 'success', 'response' => $responseObject);
-}
-
-/**
- * Checks for an empty response from an MPX API call
- * (as opposed to an error response)
- * @param $response
- * @param $service
- * @return array
- */
-function _mpx_check_empty_response($response, $service) {
-  // No response (this is what we want in this case)
-  if(!strlen($response))
-    return array('status' => 'success');
-
-  // If there is a response, look for an exception
-  $responseObject = json_decode($response);
-  // Make sure the response decodes, if not, return it's text
-  if(!is_object($responseObject))
-    return array('status' => 'error', 'response' => t('Error response from @service: @response', array('@service' => $service, '@response' => $response)));
-  // Check for an exception on the response, return it's description if set
-  if(property_exists($responseObject, 'isException'))
-    return array('status' => 'error', 'response' => t('Exception from @service: @response', array('@service' => $service, '@response' => $responseObject->description)));
-}
-
-function _mpx_check_curl_response_code($url, $responseCode) {
-  if(strpos($responseCode, '2') === 0) {
-    return array('status' => 'success');
-  }
-  else {
-    return array('status' => 'error', 'response' => t('MPX cURL request to: @url failed with response code: @responseCode', array('@url' => $url, '@responseCode' => $responseCode)));
-  }
 }

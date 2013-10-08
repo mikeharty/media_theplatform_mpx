@@ -11,11 +11,11 @@ function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
   $upload_servers = media_theplatform_mpx_upload_get_servers();
   if($upload_servers) {
     // Add an empty option to the front of the list
-    array_unshift($upload_servers, t('- Select -'));
     $form['upload']['media_theplatform_mpx__upload_server'] = array(
       '#type' => 'select',
       '#title' => t('Upload server:'),
       '#requred' => true,
+      '#empty_option' => t('- Select -'),
       '#default_value' => media_theplatform_mpx_variable_get('upload_server', 0),
       '#description' => t('Set the server which mpxMedia will be uploaded to.'),
       '#options' => $upload_servers,

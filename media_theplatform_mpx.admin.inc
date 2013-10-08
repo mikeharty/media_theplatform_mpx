@@ -176,18 +176,31 @@ function media_theplatform_mpx_check_account_settings() {
  * @ingroup forms
  */
 function media_theplatform_mpx_form_cron_settings() {
-  $form['cron'] = array(
+  $form['sync'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Cron Settings'),
+    '#title' => t('Synchronization Settings'),
     '#collapsible' => FALSE,
     '#collapsed' => FALSE,
   );
-  $form['cron'][media_theplatform_mpx_NAMESPACE . 'cron_videos'] = array(
+  $vocabulary_list = taxonomy_get_vocabularies();
+  $vocabularies = array();
+  foreach($vocabulary_list as $vocabulary) {
+    $vocabularies[$vocabulary->vid] = $vocabulary->name;
+  }
+  $form['sync'][media_theplatform_mpx_NAMESPACE . 'sync_vocabulary'] = array(
+    '#type' => 'select',
+    '#title' => t('Synchronize vocabulary:'),
+    '#options' => $vocabularies,
+    '#empty_option' => t('- Select -'),
+    '#default_value' => media_theplatform_mpx_variable_get('sync_vocabulary'),
+    '#description' => t('Set the Drupal taxonomy which will synchronize with mpx categories. Nodes which use this vocabulary will automatically sync their terms with mpx. Leave empty to to disable vocabulary syncing.'),
+  );
+  $form['sync'][media_theplatform_mpx_NAMESPACE . 'cron_videos'] = array(
     '#type' => 'checkbox',
     '#title' => t('Sync mpxMedia on Cron'),
     '#default_value' => media_theplatform_mpx_variable_get('cron_videos'),
   );
-  $form['cron'][media_theplatform_mpx_NAMESPACE . 'cron_players'] = array(
+  $form['sync'][media_theplatform_mpx_NAMESPACE . 'cron_players'] = array(
     '#type' => 'checkbox',
     '#title' => t('Sync mpxPlayers on Cron'),
     '#default_value' => media_theplatform_mpx_variable_get('cron_players'),
@@ -195,6 +208,24 @@ function media_theplatform_mpx_form_cron_settings() {
   return system_settings_form($form);
 }
 
+/**
+ * Validation for system settings form. If a sync taxonomy was set, checks
+ * that either the taxonomy or mpx has no existing terms. If true, it will
+ * perform an initial sync. This should be done in a submit handler, but
+ * system_settings_form overrides it, so it's done here.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function media_theplatform_mpx_form_cron_settings_validate($form, &$form_state) {
+  $taxonomy = $form_state['values']['media_theplatform_mpx__sync_vocabulary'];
+  if($taxonomy) {
+    if(!_mpx_taxonomy_check_empty_taxonomy($taxonomy) && !_mpx_taxonomy_check_empty_mpx_categories())
+      form_set_error('media_theplatform_mpx__sync_vocabulary', t('The selected taxonomy could not be used because it contains existing terms, and there are existing categories in mpx. You must either choose an empty taxonomy, or have no existing categories defined in mpx.'));
+    else
+      media_theplatform_mpx_taxonomy_sync();
+  }
+}
 
 /******************* mpxPlayers *****************************/
 

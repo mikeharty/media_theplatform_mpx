@@ -375,3 +375,63 @@ function media_theplatform_mpx_get_external_css($href) {
   }
   return $css;
 }
+
+/**
+ * Checks for a valid JSON response from an MPX API call
+ * @param $response
+ * @param $service
+ * @return array
+ */
+function media_theplatform_mpx_check_json_response($response, $service) {
+  // No response
+  if(!strlen($response))
+    return array('status' => 'error', 'response' => t('No response from @service', array('@service', $service)));
+  // Decode JSON
+  $responseObject = json_decode($response);
+  // Make sure the response decodes, if not, return it's text
+  if(!is_object($responseObject))
+    return array('status' => 'error', 'response' => t('Error response from @service: @response', array('@service' => $service, '@response' => $response)));
+  // Check for an exception on the response, return it's description if set
+  if(property_exists($responseObject, 'isException'))
+    return array('status' => 'error', 'response' => t('Exception from @service: @response', array('@service' => $service, '@response' => $responseObject->description)));
+  // Looking good, return the response object
+  else
+    return array('status' => 'success', 'response' => $responseObject);
+}
+
+/**
+ * Checks for an empty response from an MPX API call
+ * (as opposed to an error response)
+ * @param $response
+ * @param $service
+ * @return array
+ */
+function media_theplatform_mpx_check_empty_response($response, $service) {
+  // No response (this is what we want in this case)
+  if(!strlen($response))
+    return array('status' => 'success');
+
+  // If there is a response, look for an exception
+  $responseObject = json_decode($response);
+  // Make sure the response decodes, if not, return it's text
+  if(!is_object($responseObject))
+    return array('status' => 'error', 'response' => t('Error response from @service: @response', array('@service' => $service, '@response' => $response)));
+  // Check for an exception on the response, return it's description if set
+  if(property_exists($responseObject, 'isException'))
+    return array('status' => 'error', 'response' => t('Exception from @service: @response', array('@service' => $service, '@response' => $responseObject->description)));
+}
+
+/**
+ * Check for a successful response code from a cURL request
+ * @param $url
+ * @param $responseCode
+ * @return array
+ */
+function media_theplatform_mpx_check_curl_response_code($url, $responseCode) {
+  if(strpos($responseCode, '2') === 0) {
+    return array('status' => 'success');
+  }
+  else {
+    return array('status' => 'error', 'response' => t('MPX cURL request to: @url failed with response code: @responseCode', array('@url' => $url, '@responseCode' => $responseCode)));
+  }
+}

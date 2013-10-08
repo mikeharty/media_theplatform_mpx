@@ -16,6 +16,7 @@ include_once ('media_theplatform_mpx.helpers.php');
 include_once ('media_theplatform_mpx.player.php');
 include_once ('media_theplatform_mpx.video.php');
 include_once ('media_theplatform_mpx.version.inc');
+include_once ('media_theplatform_mpx.taxonomy.inc');
 
 /**
  * Implements hook_page_build().
@@ -147,6 +148,13 @@ function media_theplatform_mpx_menu() {
     'title' => 'mpxMedia',
     'page callback' => 'media_theplatform_mpx_page_mpx_videos',
     'type' => MENU_LOCAL_TASK,
+    'access arguments' => array('administer media'),
+    'weight' => 40,
+  );
+  $items['mpx-category-sync'] = array(
+    'title' => 'mpx category sync',
+    'page callback' => 'media_theplatform_mpx_taxonomy_sync',
+    'type' => MENU_CALLBACK,
     'access arguments' => array('administer media'),
     'weight' => 40,
   );
@@ -318,6 +326,9 @@ function media_theplatform_mpx_cron() {
   $import_account = media_theplatform_mpx_variable_get('import_account');
   // Don't do anything if we don't have signIn token or import account.
   if (media_theplatform_mpx_check_token() && $import_account) {
+    if(media_theplatform_mpx_variable_get('sync_vocabulary')) {
+      media_theplatform_mpx_taxonomy_sync('cron');
+    }
     if (media_theplatform_mpx_variable_get('cron_players')) {
       media_theplatform_mpx_import_all_players('cron');
     }
@@ -345,4 +356,32 @@ function media_theplatform_mpx_permission() {
       'description' => t('Can access Sync mpxMedia form.'),
     ),
   );
+}
+
+/**
+ * Implements hook_taxonomy_term_update().
+ * @param $term
+ */
+function media_theplatform_mpx_taxonomy_term_update($term) {
+  if($term->vid == media_theplatform_mpx_variable_get('sync_vocabulary', NULL)) {
+    db_update('mpx_categories')
+      ->fields(array('status' => 'updated', 'updated' => time()))
+      ->condition('tid', $term->tid)
+      ->condition('vid', $term->vid)
+      ->execute();
+  }
+}
+
+/**
+ * Implements hook_taxonomy_term_delete().
+ * @param $term
+ */
+function media_theplatform_mpx_taxonomy_term_delete($term) {
+  if($term->vid == media_theplatform_mpx_variable_get('sync_vocabulary', NULL)) {
+    db_update('mpx_categories')
+      ->fields(array('status' => 'deleted', 'updated' => time()))
+      ->condition('tid', $term->tid)
+      ->condition('vid', $term->vid)
+      ->execute();
+  }
 }

@@ -223,6 +223,66 @@ function media_theplatform_mpx_schema() {
     ),
     'primary key' => array('log_id'),
   );
+
+  $schema['mpx_categories'] = array(
+    'description' => 'Stores mpx category IDs for synching with Drupal terms',
+    'fields' => array(
+      'mpx_id' => array(
+        'description' => 'The term ID in mpx',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'mpx_parent_id' => array(
+        'description' => 'The parent term ID in mpx',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'tid' => array(
+        'description' => 'The Drupal term ID',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'vid' => array(
+        'description' => 'The Drupal vocabulary ID',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'parent' => array(
+        'description' => 'The Drupal parent ID',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'title' => array(
+        'description' => 'The category title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'updated' => array(
+        'description' => 'The update time',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => 'The item status',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('mpx_id'),
+  );
+
   return $schema;
 }
 
