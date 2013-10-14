@@ -469,55 +469,6 @@ function _mpx_create_media_object($account_id, $mpx_token, $title, $fields) {
 }
 
 /**
- * Adds mapped Drupal fields to media object for insertion to MPX.
- * @param $media_object
- * @param $fields
- * @return mixed
- */
-function _mpx_build_media_object_fields($media_object, $fields) {
-  // Special handling for categories
-  // @todo: This will need to be modified when multiple taxonomies are supported
-  $file_field_map = media_theplatform_mpx_variable_get('file_field_map', false);
-  if($file_field_map) {
-    $file_field_map = unserialize($file_field_map);
-    foreach($fields as $id => $val) {
-      $fi = field_info_field($id);
-      if($fi['type'] == 'taxonomy_term_reference') {
-        if(!is_array($val))
-          $val = array($val);
-        $categories = array();
-        foreach($val as $tid) {
-          $full_title = db_select('mpx_categories', 'c')
-            ->fields('c', array('full_title'))
-            ->condition('tid', $tid, '=')
-            ->execute()
-            ->fetchField();
-          if($full_title) {
-            $category = new stdClass;
-            $category->{'media$name'} = $full_title;
-            $categories[] = $category;
-          }
-        }
-        if(count($categories))
-          $media_object->entries[0]->{'media$categories'} = $categories;
-      } else {
-        if(strlen($val)) {
-          $mpx_field_id = null;
-          foreach($file_field_map as $drupal_field => $mpx_field) {
-            if($id == $drupal_field) {
-              $mpx_field_id = $mpx_field;
-              break;
-            }
-          }
-          $media_object->entries[0]->{"pl1$".$mpx_field_id} = $val;
-        }
-      }
-    }
-  }
-  return $media_object;
-}
-
-/**
  * Executes the required API calls to upload a video to MPX
  * @param $file_path
  * @param $media_object_id

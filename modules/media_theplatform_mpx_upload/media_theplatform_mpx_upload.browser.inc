@@ -115,7 +115,7 @@ function ajax_mpx_media_upload_callback($form, $form_state) {
   }
 
   // Upload the file to MPX
-  $fields = _media_theplatform_mpx_process_file_field_form($form_state);
+  $fields = media_theplatform_mpx_process_file_form_fields($form_state['values']);
   $title = $form_state['values']['uploadtitle'];
   $publishing_profiles = array_keys($form_state['values']['publish_profiles']);
   $upload = media_theplatform_mpx_upload_video(drupal_realpath($file->uri), $title, $fields, $publishing_profiles);
@@ -159,32 +159,4 @@ function ajax_command_mpx_media_upload($data, $settings = NULL) {
     'data' => $data,
     'settings' => $settings,
   );
-}
-
-function _media_theplatform_mpx_process_file_field_form($form) {
-  $fields = array();
-  if($sync_fields = media_theplatform_mpx_variable_get('file_field_map', false)) {
-    foreach(unserialize($sync_fields) as $field => $value) {
-      $fi = field_info_field($field);
-      switch($fi['type']) {
-        // Taxonomy reference fields have a special key
-        case 'taxonomy_term_reference':
-          $key = 'tid';
-          break;
-        // @todo: check for other field type keys
-        default:
-          $key = 'value';
-      }
-      // Parse multiple value fields
-      if(count($form['values'][$field]['und']) > 1) {
-        foreach($form['values'][$field]['und'] as $value) {
-         $fields[$field][] = $value[$key];
-        }
-        // single value fields
-      } else {
-       $fields[$field] = $form['values'][$field]['und'][0][$key];
-      }
-    }
-  }
-  return $fields;
 }

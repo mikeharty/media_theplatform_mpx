@@ -385,7 +385,7 @@ function media_theplatform_mpx_get_external_css($href) {
 function media_theplatform_mpx_check_json_response($response, $service) {
   // No response
   if(!strlen($response))
-    return array('status' => 'error', 'response' => t('No response from @service', array('@service', $service)));
+    return array('status' => 'error', 'response' => t('No response from @service', array('@service' => $service)));
   // Decode JSON
   $responseObject = json_decode($response);
   // Make sure the response decodes, if not, return it's text
@@ -434,4 +434,41 @@ function media_theplatform_mpx_check_curl_response_code($url, $responseCode) {
   else {
     return array('status' => 'error', 'response' => t('MPX cURL request to: @url failed with response code: @responseCode', array('@url' => $url, '@responseCode' => $responseCode)));
   }
+}
+
+/**
+ * Given an array of submitted form fields, returns an array containing
+ * the configured mapped fields with their values.
+ * @param $fields
+ * @return array
+ */
+function media_theplatform_mpx_process_file_form_fields($fields) {
+  if(is_object($fields))
+    $fields = (array) $fields;
+
+  $processed = array();
+  if($sync_fields = media_theplatform_mpx_variable_get('file_field_map', false)) {
+    foreach(unserialize($sync_fields) as $field => $value) {
+      $fi = field_info_field($field);
+      switch($fi['type']) {
+        // Taxonomy reference fields have a special key
+        case 'taxonomy_term_reference':
+          $key = 'tid';
+          break;
+        // @todo: check for other field type keys
+        default:
+          $key = 'value';
+      }
+      // Parse multiple value fields
+      if(count($fields[$field]['und']) > 1) {
+        foreach($fields[$field]['und'] as $value) {
+          $processed[$field][] = $value[$key];
+        }
+        // single value fields
+      } else {
+        $processed[$field] = $fields[$field]['und'][0][$key];
+      }
+    }
+  }
+  return $processed;
 }

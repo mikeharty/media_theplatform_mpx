@@ -329,6 +329,21 @@ function media_theplatform_mpx_file_delete($file) {
 }
 
 /**
+ * Implements hook_file_save().
+ */
+function media_theplatform_mpx_file_update($file) {
+  if($file->type == 'video') {
+    // Make sure this is an MPX video
+    if(strpos($file->uri, 'mpx') === 0) {
+      $mpx_video = media_theplatform_mpx_get_mpx_video_by_field('fid', $file->fid);
+      $mapped_fields = media_theplatform_mpx_process_file_form_fields($file);
+      media_theplatform_mpx_update_fields_in_mpx($mpx_video['id'], $mapped_fields);
+    }
+  }
+
+}
+
+/**
  * Write data from given array $data into the mpx_log table.
  */
 function media_theplatform_mpx_insert_log($data) {
