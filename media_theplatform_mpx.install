@@ -266,6 +266,13 @@ function media_theplatform_mpx_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'full_title' => array(
+        'description' => 'The full MPX title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
       'updated' => array(
         'description' => 'The update time',
         'type' => 'int',

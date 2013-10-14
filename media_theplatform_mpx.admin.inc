@@ -222,8 +222,9 @@ function media_theplatform_mpx_form_cron_settings_validate($form, &$form_state) 
   if($taxonomy) {
     if(!_mpx_taxonomy_check_empty_taxonomy($taxonomy) && !_mpx_taxonomy_check_empty_mpx_categories())
       form_set_error('media_theplatform_mpx__sync_vocabulary', t('The selected taxonomy could not be used because it contains existing terms, and there are existing categories in mpx. You must either choose an empty taxonomy, or have no existing categories defined in mpx.'));
-    else
+    else {
       media_theplatform_mpx_taxonomy_sync();
+    }
   }
 }
 
@@ -459,4 +460,113 @@ function media_theplatform_mpx_get_table_mpx_videos() {
     );
   }
   return theme('table', array('header' => $header, 'rows' => $rows));
+}
+
+function media_theplatform_mpx_page_mpx_file_mapping_form($form, $form_state) {
+  drupal_set_message(t('<b>Please note:</b> currently, this module only provides support for mapping between fields with single values and matching data types. Choices are limited to fields which match these conditions. In the future, additional work will be done to offer more complex field type mappings.<br /><br />Additionally, if multiple fields are mapped to a single field on either side, the last field to be processed will take precedence, overwriting the former value.'), 'warning');
+  $instances = field_info_instances('file', 'video');
+  $drupal_fields = array();
+  $mpx_fields = _mpx_fields_get_mpx_fields();
+  $default_values = unserialize(media_theplatform_mpx_variable_get('file_field_map'));
+  foreach($instances as $id => $val) {
+    $drupal_fields[$id] = $val['label'];
+  }
+  $form['fields'] = array(
+    '#tree' => TRUE,
+    '#theme' => 'media_theplatform_mpx_file_map_table'
+  );
+  foreach($drupal_fields as $drupal_field_id => $drupal_field_label) {
+    $field_options = array();
+    $fi = field_info_field($drupal_field_id);
+    // We're only mapping taxonomy fields which use the vocabulary configured to be synced
+    if($fi['type'] == 'taxonomy_term_reference') {
+      if($sync_vid = media_theplatform_mpx_variable_get('sync_vocabulary', false)) {
+        $vocabulary_name = $fi['settings']['allowed_values'][0]['vocabulary'];
+        $vid = db_select('taxonomy_vocabulary', 't')
+          ->fields('t', array('vid'))
+          ->condition('machine_name', $vocabulary_name, '=')
+          ->execute()
+          ->fetchField();
+        if($vid === $sync_vid) {
+          $field_options['categories'] = 'Categories';
+        }
+      }
+    } else {
+      // All other field types
+      foreach($mpx_fields as $mpx_field_id => $mpx_field_object) {
+        if(_mpx_fields_check_compatibility($drupal_field_id, $mpx_field_object))
+          $field_options[$mpx_field_id] = $mpx_field_object->title;
+      }
+    }
+
+    if(count($field_options)) {
+      $form['fields'][$drupal_field_id]['drupal_field'] = array(
+        '#type' => 'markup',
+        '#markup' => $drupal_field_label,
+      );
+
+      $form['fields'][$drupal_field_id]['mpx_field'] = array(
+        '#type' => 'select',
+        '#title' => '',
+        '#description' => '',
+        '#options' => $field_options,
+        '#default_value' => isset($default_values[$drupal_field_id]) ? $default_values[$drupal_field_id] : '',
+        '#empty_option' => t('- Select -'),
+      );
+    }
+  }
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+  return $form;
+}
+
+function media_theplatform_mpx_page_mpx_file_mapping_form_submit($form, $form_state) {
+  $fields = array();
+  foreach($form_state['values']['fields'] as $id => $val) {
+    if(strpos($id, 'field_') === 0 && strlen($val['mpx_field']))
+      $fields[$id] = $val['mpx_field'];
+  }
+
+  media_theplatform_mpx_variable_set('file_field_map', serialize($fields));
+}
+
+/**
+ * This provides rudimentary field data type mapping.
+ *
+ * Current limitations:
+ *  Only supports single value fields (no lists, maps),
+ *  Provides no casting ability
+ *  Does not check field length limitations
+ *
+ * @param $drupal_field_id
+ * @param $mpx_field_object
+ * @return bool
+ */
+function _mpx_fields_check_compatibility($drupal_field_id, $mpx_field_object) {
+  // Creating this as an array, eventually we may support some forms of casting
+  $field_compatibility_map = array(
+    'list_boolean' => array('Boolean'),
+    'number_decimal' => array('Decimal'),
+    'number_integer' => array('Integer'),
+    'text' => array('String'),
+    'text_long' => array('String'),
+    'text_with_summary' => array('String'),
+    'taxonomy_term_reference' => array('String'),
+  );
+
+  $drupal_field = field_info_field($drupal_field_id);
+  $mpx_field_type = $mpx_field_object->dataType;
+  $mpx_field_structure = $mpx_field_object->dataStructure;
+
+
+  if(!isset($field_compatibility_map[$drupal_field['type']]) || !in_array($mpx_field_type, $field_compatibility_map[$drupal_field['type']]))
+    return false;
+
+  // We're only allowing single value fields on both sides (Excluding taxonomy fields)
+  if($drupal_field['cardinality'] != 1 || $mpx_field_structure != 'Single')
+    return false;
+
+  return true;
 }

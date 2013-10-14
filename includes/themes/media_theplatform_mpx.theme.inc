@@ -35,3 +35,29 @@ function media_theplatform_mpx_preprocess_media_theplatform_mpx_video(&$variable
   $variables['player_html'] = $body;
   $variables['mpx_id'] = $parts['mpx_id'];
 }
+
+function theme_media_theplatform_mpx_file_map_table($vars) {
+  $element = $vars['element'];
+
+  $header = array(
+    'drupal_field' => t('Drupal Field'),
+    'mpx_field' => t('MPX Field'),
+  );
+  $rows = array();
+  foreach (element_children($element) as $key) {
+    $row = array();
+
+    $row['data'] = array();
+    foreach ($header as $fieldname => $title) {
+      $row['data'][] = drupal_render($element[$key][$fieldname]);
+    }
+    $rows[] = $row;
+  }
+
+  return theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => array('id' => 'form_id'), // needed for table dragging
+  ));
+}
+?>

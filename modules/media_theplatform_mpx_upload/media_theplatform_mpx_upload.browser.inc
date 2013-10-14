@@ -9,7 +9,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#title' => t('Upload video'),
     '#collapsible' => FALSE,
     '#collapsed' => FALSE,
-    '#description' => t('We should put some information here about the upload process.'),
+    '#description' => t('Upon submission, this form will start a background task which uploads your video and initiates publishing automatically. Fields which you have mapped are available on this form and will be saved to the created file and MPX.'),
     '#prefix' => '<div id="scrollable">',
     '#suffix' => '</div>',
   );
@@ -18,9 +18,27 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#type' => 'textfield',
     '#required' => true,
     '#title' => t('Title'),
+    '#weight' => -100,
     '#description' => t('Video name or title.'),
     '#default_value' => !empty($form_state['values']['title']) ? $form_state['values']['title'] : '',
   );
+
+  $form['uploadform']['filefields'] = array(
+    '#tree' => TRUE,
+  );
+
+  // Attach the mapped file fields to our form
+  $tmpfile = new stdClass();
+  $tmpfile->type = 'video';
+  field_attach_form('file', $tmpfile, $form['uploadform']['filefields'], $form_state, NULL);
+  $field_map = media_theplatform_mpx_variable_get('file_field_map', false);
+  if($field_map) {
+    $field_map = unserialize($field_map);
+    foreach($form['uploadform']['filefields'] as $key => $val) {
+      if(strpos($key, '#') !== 0 && !in_array($key, array_keys($field_map)))
+        unset($form['uploadform']['filefields'][$key]);
+    }
+  }
 
   $form['uploadform']['fileupload'] = array(
     '#type' => 'file',
@@ -56,13 +74,13 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
       'callback' => 'ajax_mpx_media_upload_callback',
       'wrapper' => 'mpx-upload-form',
     ),
+    '#weight' => 1000,
   );
   $form['#prefix'] = '<div id="mpx-upload-form">';
   $form['#suffix'] = '</div>';
 
   // Add media_theplatform_mpx_upload browser javascript and CSS.
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/media_theplatform_mpx.upload.js');
-
   return $form;
 }
 
@@ -74,16 +92,52 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
  * @return Validated form with messages
  */
 function ajax_mpx_media_upload_callback($form, $form_state) {
-  $video = _media_theplatform_mpx_upload_form_callback($form, $form_state);
-  if (is_array($video) || is_bool($video)) {
-    return $video;
+  $limits['extensions'] = '3g2 3gp asf avi dv flv f4v m4v mov mp4 mpeg mpg mts m2ts qt wmv';
+  $validators = array(
+    'file_validate_extensions' => array($limits['extensions']),
+  );
+
+  $file = file_save_upload('fileupload', $validators, drupal_realpath(file_default_scheme() . ':/'));
+
+  if (!$file) {
+    drupal_set_message(t('Only Video files are allowed here.'), 'error');
+    return $form;
   }
 
+  if ($file->filesize <= 0) {
+    // Some uploaded files had zero size, that's an error.
+    drupal_set_message(t('Uploaded file not found. Are you sure that you uploaded an existing file?'), 'error');
+    return $form;
+  }
+
+  if (form_get_errors()) {
+    return $form;
+  }
+
+  // Upload the file to MPX
+  $fields = _media_theplatform_mpx_process_file_field_form($form_state);
+  $title = $form_state['values']['uploadtitle'];
+  $publishing_profiles = array_keys($form_state['values']['publish_profiles']);
+  $upload = media_theplatform_mpx_upload_video(drupal_realpath($file->uri), $title, $fields, $publishing_profiles);
+
+  if ($upload) {
+    $video = new StdClass();
+    $video->guid = $upload->guid;
+    $video->id = $upload->id;
+    $video->title = $upload->title;
+    $video->player = $form_state['values']['upload_player'];
+  } else {
+    // If the upload failed, it will use DSM to push errors to the page, just return the form
+    return $form;
+  }
+
+  // Create video file locally, set fields, and insert into MPX tables
   $video_array['id'] = substr($video->id, strrpos($video->id, '/')+1); //extracting the numerical id from the full uri
   $video_array['guid'] = $video->guid;
   $video_array['title'] = $video->title;
   $video_array['description'] = '';
   $video_array['thumbnail_url'] = '';
+  $video_array['fields'] = $fields;
 
   media_theplatform_mpx_insert_video($video_array, null, $video->player);
 
@@ -107,80 +161,30 @@ function ajax_command_mpx_media_upload($data, $settings = NULL) {
   );
 }
 
-/**
- * Upload the submitted video.
- *
- * @param $form
- * @param $form_state
- * @return bool|StdClass
- */
-function _media_theplatform_mpx_upload_form_callback(&$form, $form_state) {
-  $limits['extensions'] = '3g2 3gp asf avi dv flv f4v m4v mov mp4 mpeg mpg mts m2ts qt wmv';
-  $validators = array(
-    'file_validate_extensions' => array($limits['extensions']),
-  );
-
-  $file = file_save_upload('fileupload', $validators, drupal_realpath(file_default_scheme() . ':/'));
-
-  if (!$file) {
-    drupal_set_message(t('Only Video files are allowed here.'), 'error');
-    return $form;
-  }
-
-  if ($file->filesize <= 0) {
-    // Some uploaded files had zero size, that's an error.
-    drupal_set_message(t('Uploaded file not found. Are you sure that you uploaded an existing file?'), 'error');
-    return $form;
-  }
-
-  if (form_get_errors()) {
-    return $form;
-  }
-
-  /*
-  $meta = array(
-    'name' => $form_state['values']['title'],
-    'shortDescription' => $form_state['values']['short'],
-    'longDescription' => $form_state['values']['long'],
-    'linkText' => $form_state['values']['linktext'],
-    'linkURL' => $form_state['values']['linkurl'],
-    'economics' => $form_state['values']['economics'],
-    'referenceId' => brightcove_generate_reference(),
-  );
-
-  if (!empty($form_state['values']['tags'])) {
-    $meta['tags'] = explode(',', $form_state['values']['tags']);
-  }
-
-  if ($custom_fields = variable_get('brightcove_custom_fields', 0)) {
-    $meta['customFields'] = array();
-
-    for ($i = 0; $i < $custom_fields; ++$i) {
-      $key = $form["custom_field_{$i}"]['#key'];
-      $meta['customFields'][$key] = $form_state['values']["custom_field_{$i}"];
+function _media_theplatform_mpx_process_file_field_form($form) {
+  $fields = array();
+  if($sync_fields = media_theplatform_mpx_variable_get('file_field_map', false)) {
+    foreach(unserialize($sync_fields) as $field => $value) {
+      $fi = field_info_field($field);
+      switch($fi['type']) {
+        // Taxonomy reference fields have a special key
+        case 'taxonomy_term_reference':
+          $key = 'tid';
+          break;
+        // @todo: check for other field type keys
+        default:
+          $key = 'value';
+      }
+      // Parse multiple value fields
+      if(count($form['values'][$field]['und']) > 1) {
+        foreach($form['values'][$field]['und'] as $value) {
+         $fields[$field][] = $value[$key];
+        }
+        // single value fields
+      } else {
+       $fields[$field] = $form['values'][$field]['und'][0][$key];
+      }
     }
   }
-
-  */
-
-  $meta = array(
-    'title' => $form_state['values']['uploadtitle'],
-  );
-
-  $publishing_profiles = array_keys($form_state['values']['publish_profiles']);
-
-  $upload = media_theplatform_mpx_upload_video(drupal_realpath($file->uri), $meta, $publishing_profiles);
-
-  if ($upload) {
-    // Using an object here because it means when we check the result
-    // of this method we can filter out errors (boolean) and the form (array)
-    $video = new StdClass();
-    $video->guid = $upload->guid;
-    $video->id = $upload->id;
-    $video->title = $upload->meta['title'];
-    $video->player = $form_state['values']['upload_player'];
-    return $video;
-  }
-
-  return $form;
+  return $fields;
 }

@@ -1,15 +1,4 @@
 <?php
-// Base URLs for MPX endpoints
-// File management
-define('MPX_MPX_FM_BASE', 'http://fms.theplatform.com');;
-// Access/auth
-define('MPX_AC_BASE', 'http://access.auth.theplatform.com');
-// Publish
-define('MPX_PUB_BASE', 'http://publish.theplatform.com');
-// Publishing data
-define('MPX_PD_BASE', 'http://data.publish.theplatform.com');
-// Workflow
-define('MPX_WF_BASE', 'http://data.workflow.theplatform.com');
 
 /**
  * Fetches a list of publishing profiles for the
@@ -116,12 +105,13 @@ function media_theplatform_mpx_upload_get_servers() {
  * @param $publishing_profiles
  * @return bool|stdClass
  */
-function media_theplatform_mpx_upload_video($file_path, $meta, $publishing_profiles) {
+function media_theplatform_mpx_upload_video($file_path, $title, $fields, $publishing_profiles) {
   // Check that an upload server has been configured
   if(!$upload_server = media_theplatform_mpx_variable_get('upload_server')) {
     drupal_set_message(t('Please <a href="@mpxpathadmin">set an upload server</a> to upload media.', array('@mpxpathadmin' => MPX_PATH_ADMIN)), 'error');
     return false;
   }
+
 
   // Check that we have a valid token (this will attempt to create one if we don't)
   if(media_theplatform_mpx_check_token()) {
@@ -130,7 +120,7 @@ function media_theplatform_mpx_upload_video($file_path, $meta, $publishing_profi
     $account_id = media_theplatform_mpx_variable_get('account_id');
 
     // Create the Media Object in MPX
-    $media_object = _mpx_create_media_object($account_id, $mpx_token, $meta);
+    $media_object = _mpx_create_media_object($account_id, $mpx_token, $title, $fields);
     if($media_object['status'] == 'error') {
       drupal_set_message($media_object['response'], 'error');
       return false;
@@ -141,7 +131,7 @@ function media_theplatform_mpx_upload_video($file_path, $meta, $publishing_profi
     }
 
     // Add the video to the upload queue
-    $mpx_queue_id = _mpx_uploads_insert($media_object_guid, $file_path, $media_object_id, $upload_server, $publishing_profiles, $meta->title);
+    $mpx_queue_id = _mpx_uploads_insert($media_object_guid, $file_path, $media_object_id, $upload_server, $publishing_profiles, $title);
 
     // If the HTTPRL module is enabled, trigger a non-blocking
     // request to the upload worker. If not, it will have to wait for cron.
@@ -158,7 +148,7 @@ function media_theplatform_mpx_upload_video($file_path, $meta, $publishing_profi
     $response = new stdClass();
     $response->guid = $media_object_guid;
     $response->id = $media_object_id;
-    $response->meta = $meta;
+    $response->title = $title;
     return $response;
   } else {
     drupal_set_message(t('Unable to sign in to MPX. Please check your <a href="@mpxpathadmin">set an upload server</a> to upload media.', array('@mpxpathadmin' => MPX_PATH_ADMIN)), 'error');
@@ -448,26 +438,23 @@ function media_theplatform_mpx_upload_status($fileId) {
  * @param $meta
  * @return array
  */
-function _mpx_create_media_object($account_id, $mpx_token, $meta) {
-  $media_object_json = '{
-    "$xmlns": {
-      "media": "http://search.yahoo.com/mrss/",
-          "pl": "http://xml.theplatform.com/data/object",
-          "plmedia": "http://xml.theplatform.com/media/data/Media"
-     },
-     "entries": [
-        {
-          "title": "'.$meta['title'].'",
-          "plmedia$approved": true
-        }
-     ]
-  }';
+function _mpx_create_media_object($account_id, $mpx_token, $title, $fields) {
+  $media_object = new stdClass;
+  $media_object->{'$xmlns'}->media = 'http://search.yahoo.com/mrss/';
+  $media_object->{'$xmlns'}->pl = 'http://xml.theplatform.com/data/object';
+  $media_object->{'$xmlns'}->plmedia = 'http://xml.theplatform.com/media/data/Media';
+  $media_object->{'$xmlns'}->pl1 = $account_id;
+  $media_object->entries[0] = new stdClass;
+  $media_object->entries[0]->title = $title;
+  $media_object->entries[0]->{'plmedia$approved'} = true;
+  $media_object = _mpx_build_media_object_fields($media_object, $fields);
+  $media_object = json_encode($media_object);
 
   $url = MPX_MD_BASE.'/media/data/Media/list?schema=1.2&form=json&account='.$account_id.'&token='.$mpx_token;
   $ch = curl_init($url);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, $media_object_json);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $media_object);
   curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/plain'));
   $response = curl_exec($ch);
   $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -479,6 +466,55 @@ function _mpx_create_media_object($account_id, $mpx_token, $meta) {
   }
 
   return media_theplatform_mpx_check_json_response($response, 'CreateMediaObject');
+}
+
+/**
+ * Adds mapped Drupal fields to media object for insertion to MPX.
+ * @param $media_object
+ * @param $fields
+ * @return mixed
+ */
+function _mpx_build_media_object_fields($media_object, $fields) {
+  // Special handling for categories
+  // @todo: This will need to be modified when multiple taxonomies are supported
+  $file_field_map = media_theplatform_mpx_variable_get('file_field_map', false);
+  if($file_field_map) {
+    $file_field_map = unserialize($file_field_map);
+    foreach($fields as $id => $val) {
+      $fi = field_info_field($id);
+      if($fi['type'] == 'taxonomy_term_reference') {
+        if(!is_array($val))
+          $val = array($val);
+        $categories = array();
+        foreach($val as $tid) {
+          $full_title = db_select('mpx_categories', 'c')
+            ->fields('c', array('full_title'))
+            ->condition('tid', $tid, '=')
+            ->execute()
+            ->fetchField();
+          if($full_title) {
+            $category = new stdClass;
+            $category->{'media$name'} = $full_title;
+            $categories[] = $category;
+          }
+        }
+        if(count($categories))
+          $media_object->entries[0]->{'media$categories'} = $categories;
+      } else {
+        if(strlen($val)) {
+          $mpx_field_id = null;
+          foreach($file_field_map as $drupal_field => $mpx_field) {
+            if($id == $drupal_field) {
+              $mpx_field_id = $mpx_field;
+              break;
+            }
+          }
+          $media_object->entries[0]->{"pl1$".$mpx_field_id} = $val;
+        }
+      }
+    }
+  }
+  return $media_object;
 }
 
 /**

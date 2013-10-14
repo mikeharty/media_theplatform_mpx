@@ -10,6 +10,7 @@ define('MPX_PATH_PLAYER', 'admin/content/file/mpxplayer');
 define('MPX_PATH_VIDEO', 'admin/content/file/mpxmedia');
 define('MPX_PATH_FILE', 'file');
 
+
 /**
  * Implements hook_media_browser_plugin_info().
  */

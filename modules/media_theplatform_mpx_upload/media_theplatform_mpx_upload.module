@@ -21,11 +21,6 @@ function media_theplatform_mpx_upload_permission() {
  */
 function media_theplatform_mpx_upload_menu() {
   $items = array();
-  $items[MPX_PATH_ADMIN.'/settings'] = array(
-    'title' => t('Import Settings'),
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10
-  );
 
   $items[MPX_PATH_ADMIN.'/upload'] = array(
     'title' => t('Upload Settings'),
@@ -33,6 +28,7 @@ function media_theplatform_mpx_upload_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('media_theplatform_mpx_form_upload_server_settings'),
     'type' => MENU_LOCAL_TASK,
+    'weight' => 20,
     'access arguments' => array('administer mpx account'),
   );
 

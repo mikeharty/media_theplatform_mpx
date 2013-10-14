@@ -90,16 +90,22 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
   if (isset($result->data)) {
     $result_data = drupal_json_decode($result->data);
     if ($result_data) {
+      $fields = array();
+      $file_field_map = media_theplatform_mpx_variable_get('file_field_map', false);
       // Keys entryCount and entries are only set when there is more than 1 entry.
       if (isset($result_data['entryCount'])) {
         foreach ($result_data['entries'] as $video) {
           $published_ids[] = basename($video['id']);
+          $fields = array();
+          if($file_field_map)
+            $fields = _mpx_fields_extract_mpx_field_values($video, unserialize($file_field_map));
           $videos[] = array(
             'id' => basename($video['id']),
             'guid' => $video['guid'],
             'title' => $video['title'],
             'description' => $video['description'],
             'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
+            'fields' => $fields,
           );
         }
       }
@@ -108,12 +114,15 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
       elseif (!isset($result_data['responseCode'])) {
         $video = $result_data;
         $published_ids[] = basename($video['id']);
+        if($file_field_map)
+          $fields = _mpx_fields_extract_mpx_field_values($video, unserialize($file_field_map));
         $videos[] = array(
           'id' => basename($video['id']),
           'guid' => $video['guid'],
           'title' => $video['title'],
           'description' => $video['description'],
           'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
+          'fields' => $fields,
         );
       }
       // Store any ids that have been unpublished.
@@ -337,8 +346,39 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL, $player_id = NU
   );
   media_theplatform_mpx_insert_log($log);
 
+  // If fields are mapped, save them to the file entity
+  media_theplatform_mpx_update_file_fields($fid, $video['fields']);
+
   // Return code to be used by media_theplatform_mpx_import_all_videos().
   return 'insert';
+}
+
+/**
+ * Updates field values on a given file entity. Fields array must
+ * be indexed by the field names to be updated.
+ * @todo: validate field datatype/format
+ * @param $fid
+ * @param $fields
+ */
+function media_theplatform_mpx_update_file_fields($fid, $fields) {
+  if(count($fields)) {
+    $wrapper = entity_metadata_wrapper('file', $fid);
+    $properties = $wrapper->getPropertyInfo();
+    foreach($fields as $field_name => $field_value) {
+      // Make sure the field actually exists on the file entity
+      if(isset($properties[$field_name])) {
+
+        try {
+          $wrapper->{$field_name}->set($field_value);
+        } catch (EntityMetadataWrapperException $e) {
+          $message = t('Caught an exception while trying to sync field @field_name: @exception', array('@field_name' => $field_name, '@exception' => $e->getMessage()));
+          watchdog('media_theplatform_mpx', $message, array(), WATCHDOG_ERROR);
+          drupal_set_message($message, 'error');
+        }
+      }
+    }
+    $wrapper->save(true);
+  }
 }
 
 /**
@@ -410,6 +450,9 @@ function media_theplatform_mpx_update_video($video) {
     'details' => $details,
   );
   media_theplatform_mpx_insert_log($log);
+
+  // If fields are mapped, save them to the file entity
+  media_theplatform_mpx_update_file_fields($mpx_video['fid'], $video['fields']);
 
   // Return code to be used by media_theplatform_mpx_import_all_videos().
   return 'update';

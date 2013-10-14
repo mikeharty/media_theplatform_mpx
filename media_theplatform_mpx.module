@@ -17,6 +17,21 @@ include_once ('media_theplatform_mpx.player.php');
 include_once ('media_theplatform_mpx.video.php');
 include_once ('media_theplatform_mpx.version.inc');
 include_once ('media_theplatform_mpx.taxonomy.inc');
+include_once ('media_theplatform_mpx.fields.inc');
+
+// Base URLs for mpx endpoints
+// Media data
+define('MPX_MD_BASE', 'http://data.media.theplatform.com');
+// File management
+define('MPX_FM_BASE', 'http://fms.theplatform.com');;
+// Access/auth
+define('MPX_AC_BASE', 'http://access.auth.theplatform.com');
+// Publish
+define('MPX_PUB_BASE', 'http://publish.theplatform.com');
+// Publishing data
+define('MPX_PD_BASE', 'http://data.publish.theplatform.com');
+// Workflow
+define('MPX_WF_BASE', 'http://data.workflow.theplatform.com');
 
 /**
  * Implements hook_page_build().
@@ -137,6 +152,19 @@ function media_theplatform_mpx_menu() {
     'type' => MENU_NORMAL_ITEM,
     'access arguments' => array('administer mpx account'),
   );
+  $items[MPX_PATH_ADMIN.'/settings'] = array(
+    'title' => t('Import Settings'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10
+  );
+  $items[MPX_PATH_ADMIN.'/file-mapping'] = array(
+    'title' => 'Video Field Mapping',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('media_theplatform_mpx_page_mpx_file_mapping_form'),
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array('administer media'),
+    'weight' => 10,
+  );
   $items[MPX_PATH_PLAYER] = array(
     'title' => 'mpxPlayers',
     'page callback' => 'media_theplatform_mpx_page_mpx_players',
@@ -151,16 +179,8 @@ function media_theplatform_mpx_menu() {
     'access arguments' => array('administer media'),
     'weight' => 40,
   );
-  $items['mpx-category-sync'] = array(
-    'title' => 'mpx category sync',
-    'page callback' => 'media_theplatform_mpx_taxonomy_sync',
-    'type' => MENU_CALLBACK,
-    'access arguments' => array('administer media'),
-    'weight' => 40,
-  );
   return $items;
 }
-
 /**
  * Implements hook_init().
  */
@@ -185,6 +205,11 @@ function media_theplatform_mpx_theme($existing, $type, $theme, $path) {
       'file' => 'media_theplatform_mpx.theme.inc',
       'path' => $path . '/includes/themes',
       'template' => 'media-theplatform-mpx-video',
+    ),
+    'media_theplatform_mpx_file_map_table' => array(
+      'file' => 'media_theplatform_mpx.theme.inc',
+      'path' => $path . '/includes/themes',
+      'render element' => 'element',
     ),
   );
 }
