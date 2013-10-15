@@ -20,6 +20,9 @@
     // Select the media
     Drupal.media.browser.selectMedia([{uri: response.data}]);
     $('#media-tab-theplatform_mpx_mpxmedia input[name=selected_file]').val(response.data);
+    // If the node field map module is enabled, trigger the field value copy
+    if(Drupal.settings.mediaThePlatformMpx.nodeFieldMap.length)
+      Drupal.behaviors.mediaMpxNodeFieldMap.copyFields();
     // Close the browser
     $('#media-tab-theplatform_mpx_mpxmedia .form-actions input[type=submit]').trigger('click');
   };

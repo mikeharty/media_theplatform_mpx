@@ -81,6 +81,13 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
 
   // Add media_theplatform_mpx_upload browser javascript and CSS.
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/media_theplatform_mpx.upload.js');
+
+  // Add node field mapping js if enabled
+  if(module_exists('media_theplatform_mpx_node_field_map')) {
+    drupal_add_js(array('mediaThePlatformMpx' => array('nodeFieldMap' => json_encode(unserialize(media_theplatform_mpx_variable_get('node_field_map', 's:0:"";'))))), 'setting');
+    drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_node_field_map') . '/media_theplatform_mpx_node_field_map.js');
+  }
+
   return $form;
 }
 
