@@ -1,4 +1,8 @@
 <?php
+/**
+ * @file
+ * Helper functions around field syncing
+ */
 
 /**
  * Returns a list of custom fields in MPX
@@ -23,6 +27,7 @@ function _mpx_fields_get_mpx_fields() {
       return false;
     }
 
+    // Check for JSON object response
     $response = media_theplatform_mpx_check_json_response($response, 'getPublishingProfiles');
     if($response['status'] == 'error') {
       drupal_set_message($response['response'], 'error');
@@ -30,7 +35,6 @@ function _mpx_fields_get_mpx_fields() {
     }
 
     $fields = array();
-
     foreach($response['response']->entries as $field) {
       $fields[$field->{'plfield$fieldName'}]->title = $field->title;
       $fields[$field->{'plfield$fieldName'}]->dataType = $field->{'plfield$dataType'};
@@ -92,7 +96,6 @@ function _mpx_fields_extract_mpx_field_values($data, $file_field_map) {
     drupal_set_message(t('Unable to sign in to MPX.'), 'error');
     return false;
   }
-
 }
 
 /**
@@ -104,12 +107,13 @@ function _mpx_fields_extract_mpx_field_values($data, $file_field_map) {
  */
 function _mpx_build_media_object_fields($media_object, $fields, $update = false) {
   // Special handling for categories
-  // @todo: This will need to be modified when multiple taxonomies are supported
+  // @todo: This will need to be modified if multiple taxonomies are supported
   $file_field_map = media_theplatform_mpx_variable_get('file_field_map', false);
   if($file_field_map) {
     $file_field_map = unserialize($file_field_map);
     foreach($fields as $id => $val) {
       $fi = field_info_field($id);
+
       if($fi['type'] == 'taxonomy_term_reference') {
         if(!is_array($val))
           $val = array($val);
@@ -131,7 +135,8 @@ function _mpx_build_media_object_fields($media_object, $fields, $update = false)
             $media_object->entries[0]->{'media$categories'} = $categories;
           else
             $media_object->{'media$categories'} = $categories;
-      } else {
+      }
+      else {
         if(strlen($val)) {
           $mpx_field_id = null;
           foreach($file_field_map as $drupal_field => $mpx_field) {
@@ -153,12 +158,15 @@ function _mpx_build_media_object_fields($media_object, $fields, $update = false)
 
 /**
  * Updates a MediaObject in MPX with provided field values
- * @param $id
- * @param $fields
+ * @param $id - The ID of the media object to be updated
+ * @param $fields - An array containing Drupal field names and values
  * @return bool
  */
 function media_theplatform_mpx_update_fields_in_mpx($id, $fields) {
   if(media_theplatform_mpx_check_token()) {
+    // Before we can sync, we need to make sure the synced taxonomy is up to date
+    media_theplatform_mpx_taxonomy_sync();
+
     $mpx_token = media_theplatform_mpx_variable_get('token');
     $account_id = media_theplatform_mpx_variable_get('account_id');
     $media_object = new stdClass;

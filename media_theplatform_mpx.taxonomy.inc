@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * functions for Taxonomies.
+ * functions for Drupal taxonomies.
  */
 
 /**
