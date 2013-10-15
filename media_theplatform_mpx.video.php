@@ -158,7 +158,6 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
  *   $data['num_inactives'] - # of videos changed from active to inactive
  */
 function media_theplatform_mpx_import_all_videos($type) {
-
   // Clicked on Videos Sync form.
   if ($type == 'manual') {
     global $user;
@@ -367,7 +366,6 @@ function media_theplatform_mpx_update_file_fields($fid, $fields) {
     foreach($fields as $field_name => $field_value) {
       // Make sure the field actually exists on the file entity
       if(isset($properties[$field_name])) {
-
         try {
           $wrapper->{$field_name}->set($field_value);
         } catch (EntityMetadataWrapperException $e) {

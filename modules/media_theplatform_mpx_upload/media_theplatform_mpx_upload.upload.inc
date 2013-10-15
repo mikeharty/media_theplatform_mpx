@@ -119,6 +119,9 @@ function media_theplatform_mpx_upload_video($file_path, $title, $fields, $publis
     $mpx_token = media_theplatform_mpx_variable_get('token');
     $account_id = media_theplatform_mpx_variable_get('account_id');
 
+    // Make sure taxonomy terms are synced
+    media_theplatform_mpx_taxonomy_sync();
+
     // Create the Media Object in MPX
     $media_object = _mpx_create_media_object($account_id, $mpx_token, $title, $fields);
     if($media_object['status'] == 'error') {

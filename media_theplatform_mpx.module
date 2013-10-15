@@ -330,6 +330,7 @@ function media_theplatform_mpx_file_delete($file) {
 
 /**
  * Implements hook_file_save().
+ *
  */
 function media_theplatform_mpx_file_update($file) {
   if($file->type == 'video') {
@@ -337,10 +338,10 @@ function media_theplatform_mpx_file_update($file) {
     if(strpos($file->uri, 'mpx') === 0) {
       $mpx_video = media_theplatform_mpx_get_mpx_video_by_field('fid', $file->fid);
       $mapped_fields = media_theplatform_mpx_process_file_form_fields($file);
-      media_theplatform_mpx_update_fields_in_mpx($mpx_video['id'], $mapped_fields);
+      if(count($mapped_fields))
+        media_theplatform_mpx_update_fields_in_mpx($mpx_video['id'], $mapped_fields);
     }
   }
-
 }
 
 /**
@@ -366,6 +367,7 @@ function media_theplatform_mpx_cron() {
   $import_account = media_theplatform_mpx_variable_get('import_account');
   // Don't do anything if we don't have signIn token or import account.
   if (media_theplatform_mpx_check_token() && $import_account) {
+    // Sync taxonomy first, so video objects have real terms to associate
     if(media_theplatform_mpx_variable_get('sync_vocabulary')) {
       media_theplatform_mpx_taxonomy_sync('cron');
     }

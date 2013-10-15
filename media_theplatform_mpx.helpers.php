@@ -466,7 +466,8 @@ function media_theplatform_mpx_process_file_form_fields($fields) {
         }
         // single value fields
       } else {
-        $processed[$field] = $fields[$field]['und'][0][$key];
+        if(isset($fields[$field]['und'][0]))
+          $processed[$field] = $fields[$field]['und'][0][$key];
       }
     }
   }
