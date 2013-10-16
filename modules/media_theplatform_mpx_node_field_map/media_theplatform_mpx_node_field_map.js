@@ -1,30 +1,41 @@
 /**
  * @file
-=
+ * If node fields are mapped to file fields, this will
+ * copy the values from the node form to the file upload
+ * form when it is opened.
  */
 (function ($) {
-
   Drupal.behaviors.mediaMpxNodeFieldMap = {
     attach: function (context, settings) {
-
-    },
-    copyFields: function () {
       var content_type = parent.Drupal.settings.arg[2];
-      var fieldMap = JSON.parse(Drupal.settings.mediaThePlatformMpx.nodeFieldMap);
-      fieldMap = fieldMap[content_type];
-      for(var field in fieldMap) {
-        parent.jQuery('.node-form input, .node-form select').each(function() {
-          var parentFieldName = jQuery(this).attr('name');
-          if(parentFieldName.substring(0, parentFieldName.indexOf('[')) == field) {
-            $('#mpx-upload-form input, #mpx-upload-form select').each(function() {
-              var fieldName = $(this).attr('name');
-              if(fieldName.substring(0, fieldName.indexOf('[')) == fieldMap[field]) {
-                parent.jQuery('[name="'+parentFieldName+'"]').val($(this).val());
+      var fieldMap = JSON.parse(Drupal.settings.mediaThePlatformMpx.nodeFieldMap)[content_type];
+      // For each field in our fieldmap, we need to find the correct field on the node form
+      // and on the file upload form. This is a little messy because there's no clean field
+      // id attribute on the forms, so we need to parse it out of the field name.
+      parent.jQuery('.node-form input, .node-form select').each(function() {
+        var parentField = jQuery(this);
+        var parentFieldName = jQuery(this).attr('name');
+        var parentFieldMapName = parentFieldName.substring(0, parentFieldName.indexOf('['));
+        if(fieldMap[parentFieldMapName] != undefined) {
+          $('#mpx-upload-form input, #mpx-upload-form select').each(function() {
+            var childField = $(this);
+            var childFieldName = $(this).attr('name');
+            var childFieldMapName = childFieldName.substring(0, childFieldName.indexOf('['))
+            if(childFieldMapName == fieldMap[parentFieldMapName]) {
+              switch (parentField.attr('type')) {
+                case 'radio':
+                case 'checkbox':
+                  if(parentField.is(':checked') && parentField.val() == childField.val()) {
+                    childField.attr("checked", "checked");
+                  }
+                  break;
+                default:
+                  childField.val(parentField.val());
               }
-            });
-          }
-        });
-      }
+            }
+          });
+        }
+      });
     }
   };
 
