@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Form constructor for mpx upload form.
  */
@@ -47,7 +46,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#type' => 'file',
     '#title' => t('Video file'),
     '#size' => 40,
-    '#description' => t('Allowed file types: ') . '<strong>3g2 3gp asf avi dv flv f4v m4v mov mp4 mpeg mpg mts m2ts qt wmv</strong>',
+    '#description' => t('Accepted file types: 3g2 3gp asf avi dv flv f4v m4v mov mp4 mpeg mpg mts m2ts qt wmv'),
   );
 
   $account = media_theplatform_mpx_variable_get('import_account');
@@ -142,6 +141,7 @@ function ajax_mpx_media_upload_callback($form, $form_state) {
   }
 
   // Create video file locally, set fields, and insert into MPX tables
+  // Insert video function requires an array
   $video_array['id'] = substr($video->id, strrpos($video->id, '/')+1); //extracting the numerical id from the full uri
   $video_array['guid'] = $video->guid;
   $video_array['title'] = $video->title;

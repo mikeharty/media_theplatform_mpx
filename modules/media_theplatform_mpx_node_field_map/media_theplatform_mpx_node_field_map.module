@@ -15,6 +15,9 @@ function media_theplatform_mpx_node_field_map_menu() {
   return $items;
 }
 
+/**
+ * Implements hook_init().
+ */
 function media_theplatform_mpx_node_field_map_init() {
   // We need to know which kind of node we are adding to map fields correctly
   if(arg(0) == 'node' && arg(1) == 'add') {
@@ -24,7 +27,6 @@ function media_theplatform_mpx_node_field_map_init() {
     $node = node_load(arg(1));
     drupal_add_js(array('contentType' => $node->type),'setting');
   }
-
 }
 
 /**
@@ -38,6 +40,12 @@ function media_theplatform_mpx_node_field_map_theme($existing, $type, $theme, $p
   );
 }
 
+/**
+ * Admin form to configure node field -> file field mappings
+ * @param $form
+ * @param $form_state
+ * @return mixed
+ */
 function media_theplatform_mpx_node_field_map_form($form, $form_state) {
   $mpx_field_map = media_theplatform_mpx_variable_get('file_field_map', false);
   if($mpx_field_map) {
@@ -68,7 +76,6 @@ function media_theplatform_mpx_node_field_map_form($form, $form_state) {
     foreach($node_fields as $node_field_id => $node_field_label) {
       $field_options = array();
       // All other field types
-
       foreach($file_fields as $file_field_id => $file_field) {
         if(_mpx_node_fields_check_compatibility($node_field_id, $file_field_id))
           $field_options[$file_field_id] = $file_field['title'];
@@ -118,6 +125,7 @@ function media_theplatform_mpx_node_field_map_form_submit($form, $form_state) {
 }
 
 /**
+ * Check that a node field type matches a file field type
  * @param $node_field_id
  * @param $file_field_id
  * @return bool
@@ -136,7 +144,11 @@ function _mpx_node_fields_check_compatibility($node_field_id, $file_field_id) {
   return true;
 }
 
-
+/**
+ * Table theme for field mapping admin page
+ * @param $vars
+ * @return string
+ */
 function theme_media_theplatform_mpx_node_field_map_table($vars) {
   $element = $vars['element'];
 

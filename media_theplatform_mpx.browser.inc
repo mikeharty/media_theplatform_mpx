@@ -92,7 +92,6 @@ function media_theplatform_mpx_form_media_browser($form, &$form_state = array(),
   // Add media_theplatform_mpx browser javascript and CSS.
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx') . '/js/media_theplatform_mpx.browser.js');
   // Standard Media module files.
-  drupal_add_js(drupal_get_path('module', 'media') . '/js/plugins/media.library.js');
   drupal_add_css(drupal_get_path('module', 'media') . '/js/plugins/media.library.css');
 
   $form['actions'] = array('#type' => 'actions');

@@ -7,13 +7,10 @@
 /**
  * Synchronizes mpx categories with a Drupal vocabulary
  *
- * @param String $type
- *   Import type. Possible values 'cron' or 'manual', for sync.
- *
  * @return boolean
  *    True if successful, false on any error
  */
-function media_theplatform_mpx_taxonomy_sync($type = NULL) {
+function media_theplatform_mpx_taxonomy_sync() {
   if(media_theplatform_mpx_variable_get('sync_vocabulary', 0)) {
     _mpx_taxonomy_sync_down();
     _mpx_taxonomy_sync_up();
@@ -30,7 +27,7 @@ function _mpx_taxonomy_sync_up() {
       $mpx_parent_id = _mpx_taxonomy_get_term_by_tid($parent_tid)->mpx_id;
     else
       $mpx_parent_id = '';
-    $mpx_category = _mpx_taxonomy_create_category_in_mpx($term->name, $mpx_parent_id);
+    $mpx_category = _mpx_taxonomy_create_category_in_mpx($term->name, $mpx_parent_id, $term->weight);
     if($mpx_category)
       _mpx_taxonomy_store_synced_term($mpx_category->id, $mpx_parent_id, $tid, $term->parent, $term->name, $mpx_category->{'plcategory$fullTitle'}, time());
   }
@@ -48,8 +45,9 @@ function _mpx_taxonomy_sync_up() {
       $term->mpx_parent_id = '';
     }
     $term->name = $drupal_term->name;
+    $term->weight = $drupal_term->weight;
     _mpx_taxonomy_update_term_in_sync_table($term->mpx_id, $term->mpx_parent_id, $term->name, $term->full_title, $term->parent);
-    _mpx_taxonomy_update_category_in_mpx($term->mpx_id, $term->name, $term->mpx_parent_id);
+    _mpx_taxonomy_update_category_in_mpx($term->mpx_id, $term->name, $term->mpx_parent_id, $term->weight);
   }
 
   // Find terms which were deleted in Drupal and delete them from mpx
@@ -73,12 +71,12 @@ function _mpx_taxonomy_sync_down() {
         // If the term has been updated on both ends,
         // whichever was updated most recently will take precedence.
         if(($mpx_category->updated / 1000) > $stored_category->updated) {
-          _mpx_taxonomy_update_term_in_drupal($mpx_category->{'plcategory$parentId'}, $mpx_category->title, $stored_category->tid);
+          _mpx_taxonomy_update_term_in_drupal($mpx_category->{'plcategory$parentId'}, $mpx_category->title, $stored_category->tid, $mpx_category->{'plcategory$order'});
           _mpx_taxonomy_update_term_in_sync_table($stored_category->mpx_id, $mpx_category->{'plcategory$parentId'}, $mpx_category->title, $mpx_category->{'plcategory$fullTitle'}, $stored_category->parent);
         }
       } else {
         // No match, create a new term
-        $synced[] = _mpx_taxonomy_create_term($mpx_category->id, $mpx_category->{'plcategory$parentId'}, $mpx_category->title, $mpx_category->{'plcategory$fullTitle'}, ($mpx_category->updated / 1000));
+        $synced[] = _mpx_taxonomy_create_term($mpx_category->id, $mpx_category->{'plcategory$parentId'}, $mpx_category->title, $mpx_category->{'plcategory$fullTitle'}, $mpx_category->updated / 1000, $mpx_category->{'plcategory$order'});
       }
     }
     // Delete any terms we have in our sync table that are no longer in mpx
@@ -127,10 +125,11 @@ function _mpx_taxonomy_update_term_in_sync_table($mpx_id, $mpx_parent_id, $title
     ->execute();
 }
 
-function _mpx_taxonomy_update_term_in_drupal($mpx_parent_id, $title, $tid) {
+function _mpx_taxonomy_update_term_in_drupal($mpx_parent_id, $title, $tid, $weight) {
   $term = taxonomy_term_load($tid);
   $term->name = $title;
   $term->parent = _mpx_taxonomy_get_term_tid_by_mpx_id($mpx_parent_id);
+  $term->weight = $weight;
   taxonomy_term_save($term);
 }
 
@@ -169,7 +168,7 @@ function _mpx_taxonomy_get_term_by_tid($tid) {
 }
 
 
-function _mpx_taxonomy_create_term($mpx_id, $mpx_parent_id, $title, $full_title, $updated) {
+function _mpx_taxonomy_create_term($mpx_id, $mpx_parent_id, $title, $full_title, $updated, $weight) {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   $parent_id = $mpx_parent_id ? _mpx_taxonomy_get_term_tid_by_mpx_id($mpx_parent_id) : 0;
 
@@ -179,6 +178,7 @@ function _mpx_taxonomy_create_term($mpx_id, $mpx_parent_id, $title, $full_title,
   $term->parent = $parent_id;
   $term->format = 'filtered_html';
   $term->description = '';
+  $term->weight = $weight;
   taxonomy_term_save($term);
   $tid = $term->tid;
 
@@ -325,12 +325,12 @@ function _mpx_taxonomy_get_term_depth($tid) {
   return $depth;
 }
 
-function _mpx_taxonomy_create_category_in_mpx($term, $parent_id) {
+function _mpx_taxonomy_create_category_in_mpx($term, $parent_id, $weight) {
   if(media_theplatform_mpx_check_token()) {
     $payload = new stdClass;
     $payload->{'$xmlns'}->plcategory = "http://xml.theplatform.com/media/data/Category";
     $payload->locked = false;
-    $payload->{'plcategory$order'} = 2147483647;
+    $payload->{'plcategory$order'} = $weight;
     $payload->{'plcategory$parentId'} = $parent_id;
     $payload->{'plcategory$titleLocalized'} = new stdClass;
     $payload->title = $term;
@@ -371,11 +371,12 @@ function _mpx_taxonomy_create_category_in_mpx($term, $parent_id) {
   }
 }
 
-function _mpx_taxonomy_update_category_in_mpx($term_id, $term_name, $parent_id) {
+function _mpx_taxonomy_update_category_in_mpx($term_id, $term_name, $parent_id, $weight) {
   if(media_theplatform_mpx_check_token()) {
     $payload = new stdClass;
     $payload->{'$xmlns'}->plcategory = "http://xml.theplatform.com/media/data/Category";
     $payload->id = $term_id;
+    $payload->{'plcategory$order'} = $weight;
     $payload->{'plcategory$titleLocalized'} = new stdClass;
     $payload->{'plcategory$parentId'} = $parent_id;
     $payload->title = $term_name;

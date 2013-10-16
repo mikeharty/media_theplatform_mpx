@@ -21,7 +21,11 @@ function media_theplatform_mpx_upload_permission() {
  */
 function media_theplatform_mpx_upload_menu() {
   $items = array();
-
+  $items[MPX_PATH_ADMIN.'/settings'] = array(
+    'title' => t('Import Settings'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10
+  );
 
   $items[MPX_PATH_ADMIN.'/upload'] = array(
     'title' => t('Upload Settings'),

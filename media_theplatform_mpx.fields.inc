@@ -203,3 +203,81 @@ function media_theplatform_mpx_update_fields_in_mpx($id, $fields) {
     return false;
   }
 }
+
+/**
+ * This provides rudimentary field data type mapping.
+ *
+ * Current limitations:
+ *  Only supports single value fields (no lists, maps),
+ *  Provides no casting ability or other format conversions
+ *  Does not check field length limitations
+ *
+ * @param $drupal_field_id
+ * @param $mpx_field_object
+ * @return bool
+ */
+function _mpx_fields_check_compatibility($drupal_field_id, $mpx_field_object) {
+  // Creating this as an array, eventually we may support some forms of casting
+  $field_compatibility_map = array(
+    'list_boolean' => array('Boolean'),
+    'number_decimal' => array('Decimal'),
+    'number_integer' => array('Integer'),
+    'text' => array('String'),
+    'text_long' => array('String'),
+    'text_with_summary' => array('String'),
+    'taxonomy_term_reference' => array('String'),
+  );
+
+  $drupal_field = field_info_field($drupal_field_id);
+  $mpx_field_type = $mpx_field_object->dataType;
+  $mpx_field_structure = $mpx_field_object->dataStructure;
+
+  if(!isset($field_compatibility_map[$drupal_field['type']]) || !in_array($mpx_field_type, $field_compatibility_map[$drupal_field['type']]))
+    return false;
+
+  // We're only allowing single value fields on both sides (Excluding taxonomy fields)
+  if($drupal_field['cardinality'] != 1 || $mpx_field_structure != 'Single')
+    return false;
+
+  return true;
+}
+
+/**
+ * Given an array of submitted form fields, returns an array containing
+ * the configured mapped fields with their values.
+ * @param $fields
+ * @return array
+ */
+function media_theplatform_mpx_process_file_form_fields($fields) {
+  if(is_object($fields))
+    $fields = (array) $fields;
+
+  $processed = array();
+  if($sync_fields = media_theplatform_mpx_variable_get('file_field_map', false)) {
+    foreach(unserialize($sync_fields) as $field => $value) {
+      $fi = field_info_field($field);
+      switch($fi['type']) {
+        // Taxonomy reference fields have a special key
+        case 'taxonomy_term_reference':
+          $key = 'tid';
+          break;
+        // @todo: check for other field type keys
+        default:
+          $key = 'value';
+      }
+      if(isset($fields[$field]['und'])) {
+        // Parse multiple value fields
+        if(count($fields[$field]['und']) > 1) {
+          foreach($fields[$field]['und'] as $value) {
+            $processed[$field][] = $value[$key];
+          }
+          // single value fields
+        } else {
+          if(isset($fields[$field]['und'][0]))
+            $processed[$field] = $fields[$field]['und'][0][$key];
+        }
+      }
+    }
+  }
+  return $processed;
+}

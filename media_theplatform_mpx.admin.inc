@@ -462,6 +462,9 @@ function media_theplatform_mpx_get_table_mpx_videos() {
   return theme('table', array('header' => $header, 'rows' => $rows));
 }
 
+
+/******************* File field mapping *****************************/
+
 function media_theplatform_mpx_page_mpx_file_mapping_form($form, $form_state) {
   drupal_set_message(t('<b>Please note:</b> currently, this module only provides support for mapping between fields with single values and matching data types. Choices are limited to fields which match these conditions. In the future, additional work will be done to offer more complex field type mappings.<br /><br />Additionally, if multiple fields are mapped to a single field on either side, the last field to be processed will take precedence, overwriting the former value.'), 'warning');
   $instances = field_info_instances('file', 'video');
@@ -530,43 +533,4 @@ function media_theplatform_mpx_page_mpx_file_mapping_form_submit($form, $form_st
   }
 
   media_theplatform_mpx_variable_set('file_field_map', serialize($fields));
-}
-
-/**
- * This provides rudimentary field data type mapping.
- *
- * Current limitations:
- *  Only supports single value fields (no lists, maps),
- *  Provides no casting ability
- *  Does not check field length limitations
- *
- * @param $drupal_field_id
- * @param $mpx_field_object
- * @return bool
- */
-function _mpx_fields_check_compatibility($drupal_field_id, $mpx_field_object) {
-  // Creating this as an array, eventually we may support some forms of casting
-  $field_compatibility_map = array(
-    'list_boolean' => array('Boolean'),
-    'number_decimal' => array('Decimal'),
-    'number_integer' => array('Integer'),
-    'text' => array('String'),
-    'text_long' => array('String'),
-    'text_with_summary' => array('String'),
-    'taxonomy_term_reference' => array('String'),
-  );
-
-  $drupal_field = field_info_field($drupal_field_id);
-  $mpx_field_type = $mpx_field_object->dataType;
-  $mpx_field_structure = $mpx_field_object->dataStructure;
-
-
-  if(!isset($field_compatibility_map[$drupal_field['type']]) || !in_array($mpx_field_type, $field_compatibility_map[$drupal_field['type']]))
-    return false;
-
-  // We're only allowing single value fields on both sides (Excluding taxonomy fields)
-  if($drupal_field['cardinality'] != 1 || $mpx_field_structure != 'Single')
-    return false;
-
-  return true;
 }

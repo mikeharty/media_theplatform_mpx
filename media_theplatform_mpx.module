@@ -369,7 +369,7 @@ function media_theplatform_mpx_cron() {
   if (media_theplatform_mpx_check_token() && $import_account) {
     // Sync taxonomy first, so video objects have real terms to associate
     if(media_theplatform_mpx_variable_get('sync_vocabulary')) {
-      media_theplatform_mpx_taxonomy_sync('cron');
+      media_theplatform_mpx_taxonomy_sync();
     }
     if (media_theplatform_mpx_variable_get('cron_players')) {
       media_theplatform_mpx_import_all_players('cron');

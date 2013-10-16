@@ -367,7 +367,11 @@ function media_theplatform_mpx_update_file_fields($fid, $fields) {
       // Make sure the field actually exists on the file entity
       if(isset($properties[$field_name])) {
         try {
-          $wrapper->{$field_name}->set($field_value);
+          $fi = field_info_field($field_name);
+          if($fi['type'] == 'taxonomy_term_reference' && !is_array($field_value))
+            $field_value = array($field_value);
+          if(is_array($field_value) || strlen($field_value))
+            $wrapper->{$field_name}->set($field_value);
         } catch (EntityMetadataWrapperException $e) {
           $message = t('Caught an exception while trying to sync field @field_name: @exception', array('@field_name' => $field_name, '@exception' => $e->getMessage()));
           watchdog('media_theplatform_mpx', $message, array(), WATCHDOG_ERROR);

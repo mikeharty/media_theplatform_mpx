@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @file media_theplatform_mpx/includes/MediaThePlatformMpxMediaBrowser.inc
+ * @file
  *
  * Definition of MediaThePlatformMpxMediaBrowser.
  */

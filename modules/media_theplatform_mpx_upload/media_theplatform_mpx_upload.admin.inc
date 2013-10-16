@@ -1,5 +1,4 @@
 <?php
-
 function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
   $form['upload'] = array(
     '#type' => 'fieldset',
@@ -10,7 +9,6 @@ function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
 
   $upload_servers = media_theplatform_mpx_upload_get_servers();
   if($upload_servers) {
-    // Add an empty option to the front of the list
     $form['upload']['media_theplatform_mpx__upload_server'] = array(
       '#type' => 'select',
       '#title' => t('Upload server:'),
@@ -36,13 +34,18 @@ function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
 
   $form['publishing']['media_theplatform_mpx__auto_publish'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Publish nodes automatically when videos are finished publishing in MPX.'),
+    '#title' => t('Publish nodes automatically when videos are finished publishing in mpx.'),
     '#default_value' => media_theplatform_mpx_variable_get('auto_publish', true),
   );
 
   return system_settings_form($form);
 }
 
+/**
+ * Admin page which lists upload log with status
+ * @todo: Paging
+ * @return string
+ */
 function media_theplatform_mpx_upload_list() {
   $header = array('ID', 'File', 'Title', 'Created', 'Updated', 'Status', 'Status Message');
   $rows = array();
