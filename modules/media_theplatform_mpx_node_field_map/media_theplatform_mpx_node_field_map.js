@@ -7,7 +7,7 @@
 (function ($) {
   Drupal.behaviors.mediaMpxNodeFieldMap = {
     attach: function (context, settings) {
-      var content_type = parent.Drupal.settings.arg[2];
+      var content_type = parent.Drupal.settings.contentType;
       var fieldMap = JSON.parse(Drupal.settings.mediaThePlatformMpx.nodeFieldMap)[content_type];
       // For each field in our fieldmap, we need to find the correct field on the node form
       // and on the file upload form. This is a little messy because there's no clean field

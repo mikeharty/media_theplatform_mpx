@@ -25,6 +25,9 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
 
   $form['uploadform']['filefields'] = array(
     '#tree' => TRUE,
+    '#type' => 'fieldset',
+    '#collapsed' => false,
+    '#title' => t('Synced fields'),
   );
 
   // Attach the mapped file fields to our form
@@ -81,7 +84,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
 
   // Add media_theplatform_mpx_upload browser javascript and CSS.
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/media_theplatform_mpx.upload.js');
-
+  drupal_add_css(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/media_theplatform_mpx.upload.css');
   // Add node field mapping js if enabled
   if(module_exists('media_theplatform_mpx_node_field_map')) {
     drupal_add_js(array('mediaThePlatformMpx' => array('nodeFieldMap' => json_encode(unserialize(media_theplatform_mpx_variable_get('node_field_map', 's:0:"";'))))), 'setting');

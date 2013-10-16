@@ -17,8 +17,14 @@ function media_theplatform_mpx_node_field_map_menu() {
 
 function media_theplatform_mpx_node_field_map_init() {
   // We need to know which kind of node we are adding to map fields correctly
-  if(arg(0) == 'node' && arg(1) == 'add')
-    drupal_add_js(array('arg' => arg()),'setting');
+  if(arg(0) == 'node' && arg(1) == 'add') {
+    drupal_add_js(array('contentType' => arg(2)),'setting');
+  }
+  else if (arg(0) == 'node' && arg(2) == 'edit') {
+    $node = node_load(arg(1));
+    drupal_add_js(array('contentType' => $node->type),'setting');
+  }
+
 }
 
 /**
