@@ -6,6 +6,7 @@ files[] = includes/MediaThePlatformMpxStreamWrapper.inc
 files[] = includes/MediaInternetThePlatformMpxHandler.inc
 files[] = includes/MediaThePlatformMpxPlayerBrowser.inc
 files[] = includes/MediaThePlatformMpxMediaBrowser.inc
+dependencies[] = media
 dependencies[] = media_internet
 dependencies[] = file_entity
 configure = admin/config/media/theplatform
