@@ -13,6 +13,12 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#suffix' => '</div>',
   );
 
+  // Check that an upload server has been configured
+  if(!$upload_server = media_theplatform_mpx_variable_get('upload_server', false)) {
+    $form['uploadform']['#description'] = t('Please <a href="@mpxpathadmin" target="_blank">set an upload server</a> to upload mpxVideos.', array('@mpxpathadmin' => '/admin/config/media/theplatform/upload'));
+    return $form;
+  }
+
   $form['uploadform']['uploadtitle'] = array(
     '#type' => 'textfield',
     '#required' => true,
@@ -68,7 +74,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#options' => media_theplatform_mpx_upload_get_publishing_profiles(),
   );
 
-  $form['uploadform']['upload'] = array(
+  $form['uploadform']['submit'] = array(
     '#type' => 'button',
     '#name' => 'upload',
     '#value' => t('Upload and attach'),

@@ -58,6 +58,7 @@ function theme_media_theplatform_mpx_file_map_table($vars) {
     'header' => $header,
     'rows' => $rows,
     'attributes' => array('id' => 'form_id'), // needed for table dragging
+    'empty' => t('There are no fields available to be mapped. Please check your video file entity fields by <a href="@link">clicking here</a>', array('@link' => '/admin/structure/file-types/manage/video/fields')),
   ));
 }
 ?>

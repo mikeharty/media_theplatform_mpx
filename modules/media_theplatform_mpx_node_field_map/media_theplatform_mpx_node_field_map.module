@@ -171,5 +171,6 @@ function theme_media_theplatform_mpx_node_field_map_table($vars) {
     'header' => $header,
     'rows' => $rows,
     'attributes' => array('id' => 'form_id'), // needed for table dragging
+    'empty' => t('There are no fields mapped on your video file entities that can be mapped to this content type\'s fields. Please check your video file entity field mapping by <a href="@link">clicking here</a>', array('@link' => '/admin/config/media/theplatform/file-mapping')),
   ));
 }

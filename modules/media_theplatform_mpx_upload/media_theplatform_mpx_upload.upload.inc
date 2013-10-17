@@ -107,8 +107,8 @@ function media_theplatform_mpx_upload_get_servers() {
  */
 function media_theplatform_mpx_upload_video($file_path, $title, $fields, $publishing_profiles) {
   // Check that an upload server has been configured
-  if(!$upload_server = media_theplatform_mpx_variable_get('upload_server')) {
-    drupal_set_message(t('Please <a href="@mpxpathadmin">set an upload server</a> to upload media.', array('@mpxpathadmin' => MPX_PATH_ADMIN)), 'error');
+  if(!$upload_server = media_theplatform_mpx_variable_get('upload_server', false)) {
+    drupal_set_message(t('Please <a href="@mpxpathadmin" target="_blank">set an upload server</a> to upload mpxVideos.', array('@mpxpathadmin' => '/admin/config/media/theplatform/upload')), 'error');
     return false;
   }
 
