@@ -36,12 +36,18 @@ function media_theplatform_mpx_preprocess_media_theplatform_mpx_video(&$variable
   $variables['mpx_id'] = $parts['mpx_id'];
 }
 
+/**
+ * Table theme for mapping Video File fields to
+ * mpx Video fields.
+ * @param $vars
+ * @return string
+ */
 function theme_media_theplatform_mpx_file_map_table($vars) {
   $element = $vars['element'];
 
   $header = array(
-    'drupal_field' => t('Drupal Field'),
-    'mpx_field' => t('MPX Field'),
+    'drupal_field' => t('Video File Field'),
+    'mpx_field' => t('mpx Field'),
   );
   $rows = array();
   foreach (element_children($element) as $key) {

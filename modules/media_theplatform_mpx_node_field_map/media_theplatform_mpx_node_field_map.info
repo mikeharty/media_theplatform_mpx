@@ -2,8 +2,8 @@ name = Media: ThePlatform mpx video to node field mapping
 description = Provides mapping between mpxVideo entity fields and node fields.
 package = "Media"
 core = 7.x
-dependencies[] = media
+dependencies[] = media (>=7.x-2.0-alpha2)
 dependencies[] = media_internet
-dependencies[] = file_entity
+dependencies[] = file_entity (>=7.x-2.0-alpha2)
 dependencies[] = media_theplatform_mpx
 dependencies[] = media_theplatform_mpx_upload

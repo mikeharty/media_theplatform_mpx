@@ -1,4 +1,10 @@
 <?php
+/**
+ * System settings form to set upload server
+ * @param $form
+ * @param $form_state
+ * @return mixed
+ */
 function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
   $form['upload'] = array(
     '#type' => 'fieldset',
@@ -43,7 +49,6 @@ function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
 
 /**
  * Admin page which lists upload log with status
- * @todo: Paging
  * @return string
  */
 function media_theplatform_mpx_upload_list() {
@@ -53,6 +58,8 @@ function media_theplatform_mpx_upload_list() {
   $uploads = db_select('mpx_uploads', 'q')
     ->fields('q')
     ->orderBy('created', 'DESC')
+    ->extend('PagerDefault')
+    ->limit(10)
     ->execute()
     ->fetchAll();
 
@@ -69,12 +76,8 @@ function media_theplatform_mpx_upload_list() {
       );
     }
   }
-  $table_element = array(
-    '#theme' => 'table',
-    '#header' => $header,
-    '#rows' => $rows,
-    '#empty' =>t('No uploads tracked.'),
-  );
 
-  return drupal_render($table_element);
+  $output = theme('table', array('header' => $header, 'rows' => $rows, 'empty' => t('No uploads tracked.')));
+  $output .= theme('pager');
+  return $output;
 }

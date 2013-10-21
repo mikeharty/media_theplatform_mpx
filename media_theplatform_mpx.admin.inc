@@ -465,6 +465,12 @@ function media_theplatform_mpx_get_table_mpx_videos() {
 
 /******************* File field mapping *****************************/
 
+/**
+ * Form for mapping file entity fields to mpx fields.
+ * @param $form
+ * @param $form_state
+ * @return mixed
+ */
 function media_theplatform_mpx_page_mpx_file_mapping_form($form, $form_state) {
   drupal_set_message(t('<b>Please note:</b> currently, this module only provides support for mapping between fields with single values and matching data types. Choices are limited to fields which match these conditions. In the future, additional work will be done to offer more complex field type mappings.<br /><br />Additionally, if multiple fields are mapped to a single field on either side, the last field to be processed will take precedence, overwriting the former value.'), 'warning');
   $instances = field_info_instances('file', 'video');
@@ -525,6 +531,11 @@ function media_theplatform_mpx_page_mpx_file_mapping_form($form, $form_state) {
   return $form;
 }
 
+/**
+ * Submit handler for file field mapping form
+ * @param $form
+ * @param $form_state
+ */
 function media_theplatform_mpx_page_mpx_file_mapping_form_submit($form, $form_state) {
   $fields = array();
   foreach($form_state['values']['fields'] as $id => $val) {

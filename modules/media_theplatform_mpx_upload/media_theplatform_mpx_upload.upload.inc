@@ -261,6 +261,11 @@ function media_theplatform_mpx_upload_worker($mpx_queue_id) {
   }
 }
 
+/**
+ * Background process which watches the status of uploaded videos,
+ * checks the published state of each selected publishing profile
+ * and updates videos once all of their publishing actions are complete.
+ */
 function _mpx_publishing_status_watcher() {
   if(media_theplatform_mpx_check_token()) {
     $mpx_token = media_theplatform_mpx_variable_get('token');
@@ -358,7 +363,6 @@ function _mpx_publishing_status_watcher() {
 /**
  * Runs on cron, will ensure that the publishing status watch isn't stuck,
  * and if it is, will set any videos which have been stuck for > 6 hours to failed
- * @todo: make timeout config variable
  */
 function _mpx_publishing_status_watcher_health_check() {
   $publishing_videos = db_select('mpx_uploads', 'q')
@@ -438,7 +442,8 @@ function media_theplatform_mpx_upload_status($fileId) {
  * Creates a new Media Object in MPX
  * @param $account_id
  * @param $mpx_token
- * @param $meta
+ * @param $title
+ * @param $fields
  * @return array
  */
 function _mpx_create_media_object($account_id, $mpx_token, $title, $fields) {

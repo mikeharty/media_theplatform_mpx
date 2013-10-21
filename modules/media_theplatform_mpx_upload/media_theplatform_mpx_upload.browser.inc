@@ -1,6 +1,7 @@
 <?php
 /**
  * Form constructor for mpx upload form.
+ * This is rendered in the media browser.
  */
 function media_theplatform_mpx_upload_form($form, &$form_state) {
   $form['uploadform'] = array(
@@ -100,7 +101,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
 }
 
 /**
- * Ajax callback for upload form
+ * AJAX callback for upload form
  *
  * @param $form
  * @param $form_state

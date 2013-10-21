@@ -292,7 +292,8 @@ function media_theplatform_mpx_import_video($video) {
  * @param int $fid
  *   File fid of Video's File in file_managed if it already exists
  *   NULL if it doesn't exist
- *
+ * @param null $player_id
+ *   The upload form can provide a player id for a new video
  * @return String
  *   Returns 'insert' for counters in media_theplatform_mpx_import_all_videos()
  */
@@ -355,7 +356,6 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL, $player_id = NU
 /**
  * Updates field values on a given file entity. Fields array must
  * be indexed by the field names to be updated.
- * @todo: validate field datatype/format
  * @param $fid
  * @param $fields
  */

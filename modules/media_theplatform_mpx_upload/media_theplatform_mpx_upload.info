@@ -3,9 +3,9 @@ description = Provides upload capability to Media: ThePlatform mpx module.
 package = "Media"
 core = 7.x
 files[] = includes/MediaThePlatformMpxMediaUpload.inc
-dependencies[] = media
+dependencies[] = media (>=7.x-2.0-alpha2)
 dependencies[] = media_internet
-dependencies[] = file_entity
+dependencies[] = file_entity (>=7.x-2.0-alpha2)
 dependencies[] = media_theplatform_mpx
 
 configure = admin/config/media/theplatform/upload

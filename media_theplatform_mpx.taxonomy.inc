@@ -17,6 +17,9 @@ function media_theplatform_mpx_taxonomy_sync() {
   }
 }
 
+/**
+ * Syncs any newly created or changed terms from Drupal to mpx
+ */
 function _mpx_taxonomy_sync_up() {
   // Find new terms in Drupal and create them in mpx
   $unsynced_terms = _mpx_taxonomy_get_unsynced_terms();
@@ -58,6 +61,9 @@ function _mpx_taxonomy_sync_up() {
   }
 }
 
+/**
+ * Syncs any newly created or changed categories from mpx to Drupal
+ */
 function _mpx_taxonomy_sync_down() {
   // Get a list of all current mpx categories
   if($mpx_categories = _mpx_taxonomy_get_categories()) {
@@ -91,6 +97,10 @@ function _mpx_taxonomy_sync_down() {
   }
 }
 
+/**
+ * Delete a term from our term tracking table
+ * @param $tid
+ */
 function _mpx_taxonomy_delete_term_from_sync_table($tid) {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   db_delete('mpx_categories')
@@ -99,6 +109,11 @@ function _mpx_taxonomy_delete_term_from_sync_table($tid) {
     ->execute();
 }
 
+/**
+ * Update a tracked term
+ * @param $tid
+ * @param $status
+ */
 function _mpx_taxonomy_update_term_status($tid, $status) {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   db_update('mpx_categories')
@@ -110,6 +125,15 @@ function _mpx_taxonomy_update_term_status($tid, $status) {
     ->execute();
 }
 
+/**
+ * Updates a term in our tracking table
+ * @param $mpx_id
+ * @param $mpx_parent_id
+ * @param $title
+ * @param $full_title
+ * @param $parent
+ * @param string $status
+ */
 function _mpx_taxonomy_update_term_in_sync_table($mpx_id, $mpx_parent_id, $title, $full_title, $parent, $status = '') {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   db_update('mpx_categories')
@@ -125,6 +149,13 @@ function _mpx_taxonomy_update_term_in_sync_table($mpx_id, $mpx_parent_id, $title
     ->execute();
 }
 
+/**
+ * Updates an existing Drupal term with changes from MPX
+ * @param $mpx_parent_id
+ * @param $title
+ * @param $tid
+ * @param $weight
+ */
 function _mpx_taxonomy_update_term_in_drupal($mpx_parent_id, $title, $tid, $weight) {
   $term = taxonomy_term_load($tid);
   $term->name = $title;
@@ -133,6 +164,11 @@ function _mpx_taxonomy_update_term_in_drupal($mpx_parent_id, $title, $tid, $weig
   taxonomy_term_save($term);
 }
 
+/**
+ * Get a Drupal term tid from the tracking table by mpx ID
+ * @param $mpx_id
+ * @return int
+ */
 function _mpx_taxonomy_get_term_tid_by_mpx_id($mpx_id) {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   $tid = db_select('mpx_categories', 'c')
@@ -145,6 +181,11 @@ function _mpx_taxonomy_get_term_tid_by_mpx_id($mpx_id) {
     return $tid ? $tid : 0;
 }
 
+/**
+ * Get a term from our tracking table by mpx ID
+ * @param $mpx_id
+ * @return bool
+ */
 function _mpx_taxonomy_get_term_by_mpx_id($mpx_id) {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   $term = db_select('mpx_categories', 'c')
@@ -156,6 +197,11 @@ function _mpx_taxonomy_get_term_by_mpx_id($mpx_id) {
     return isset($term[0]) ? $term[0] : false;
 }
 
+/**
+ * Get a term from our tracking table by Drupal tid
+ * @param $tid
+ * @return bool
+ */
 function _mpx_taxonomy_get_term_by_tid($tid) {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   $term = db_select('mpx_categories', 'c')
@@ -167,7 +213,16 @@ function _mpx_taxonomy_get_term_by_tid($tid) {
   return isset($term[0]) ? $term[0] : false;
 }
 
-
+/**
+ * Creates a term in Drupal and stores it's details in our tracking table
+ * @param $mpx_id
+ * @param $mpx_parent_id
+ * @param $title
+ * @param $full_title
+ * @param $updated
+ * @param $weight
+ * @return mixed
+ */
 function _mpx_taxonomy_create_term($mpx_id, $mpx_parent_id, $title, $full_title, $updated, $weight) {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   $parent_id = $mpx_parent_id ? _mpx_taxonomy_get_term_tid_by_mpx_id($mpx_parent_id) : 0;
@@ -187,6 +242,16 @@ function _mpx_taxonomy_create_term($mpx_id, $mpx_parent_id, $title, $full_title,
   return $tid;
 }
 
+/**
+ * Stores information about a term in our tracking table
+ * @param $mpx_id
+ * @param $mpx_parent_id
+ * @param $tid
+ * @param $parent_id
+ * @param $title
+ * @param $full_title
+ * @param $updated
+ */
 function _mpx_taxonomy_store_synced_term($mpx_id, $mpx_parent_id, $tid, $parent_id, $title, $full_title, $updated) {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   db_insert('mpx_categories')
@@ -203,6 +268,10 @@ function _mpx_taxonomy_store_synced_term($mpx_id, $mpx_parent_id, $tid, $parent_
     ->execute();
 }
 
+/**
+ * Gets a list of all categories in MPX and their details
+ * @return bool
+ */
 function _mpx_taxonomy_get_categories() {
   if(media_theplatform_mpx_check_token()) {
     $mpx_token = media_theplatform_mpx_variable_get('token');
@@ -237,6 +306,13 @@ function _mpx_taxonomy_get_categories() {
   }
 }
 
+/**
+ * Sorts an array of categories by level
+ * This is used to ensure parent level terms are always created before children
+ * @param $a
+ * @param $b
+ * @return int
+ */
 function _mpx_sort_categories_by_level($a, $b) {
   if($a->{'plcategory$level'} == $b->{'plcategory$level'})
     return 0;
@@ -244,6 +320,12 @@ function _mpx_sort_categories_by_level($a, $b) {
   return ($a->{'plcategory$level'} < $b->{'plcategory$level'}) ? -1 : 1;
 }
 
+/**
+ * Sorts an array of Drupal terms by depth
+ * @param $a
+ * @param $b
+ * @return int
+ */
 function _mpx_sort_terms_by_depth($a, $b) {
   if($a->depth == $b->depth)
     return 0;
@@ -280,6 +362,10 @@ function _mpx_taxonomy_get_unsynced_terms() {
   return false;
 }
 
+/**
+ * Gets all terms marked as updated from our tracking table
+ * @return mixed
+ */
 function _mpx_taxonomy_get_updated_terms() {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   $terms = db_select('mpx_categories', 'c')
@@ -292,6 +378,10 @@ function _mpx_taxonomy_get_updated_terms() {
   return $terms;
 }
 
+/**
+ * Gets all terms marked as deleted from our tracking table
+ * @return mixed
+ */
 function _mpx_taxonomy_get_deleted_terms() {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   $terms = db_select('mpx_categories', 'c')
@@ -304,7 +394,10 @@ function _mpx_taxonomy_get_deleted_terms() {
   return $terms;
 }
 
-
+/**
+ * Gets all terms from our tracking table
+ * @return mixed
+ */
 function _mpx_taxonomy_get_all_synced_terms() {
   $vid = media_theplatform_mpx_variable_get('sync_vocabulary');
   $terms = db_select('mpx_categories', 'c')
@@ -316,6 +409,11 @@ function _mpx_taxonomy_get_all_synced_terms() {
   return $terms;
 }
 
+/**
+ * Gets the depth for a Drupal term by tid
+ * @param $tid
+ * @return int
+ */
 function _mpx_taxonomy_get_term_depth($tid) {
   $depth = 0;
   while ($parent = db_select('taxonomy_term_hierarchy', 't') ->condition('tid', $tid, '=') ->fields('t') ->execute() ->fetchAssoc()) {
@@ -325,6 +423,13 @@ function _mpx_taxonomy_get_term_depth($tid) {
   return $depth;
 }
 
+/**
+ * Creates a new category in mpx
+ * @param $term
+ * @param $parent_id
+ * @param $weight
+ * @return bool
+ */
 function _mpx_taxonomy_create_category_in_mpx($term, $parent_id, $weight) {
   if(media_theplatform_mpx_check_token()) {
     $payload = new stdClass;
@@ -371,6 +476,14 @@ function _mpx_taxonomy_create_category_in_mpx($term, $parent_id, $weight) {
   }
 }
 
+/**
+ * Updates an existing category in mpx
+ * @param $term_id
+ * @param $term_name
+ * @param $parent_id
+ * @param $weight
+ * @return bool
+ */
 function _mpx_taxonomy_update_category_in_mpx($term_id, $term_name, $parent_id, $weight) {
   if(media_theplatform_mpx_check_token()) {
     $payload = new stdClass;
@@ -418,6 +531,11 @@ function _mpx_taxonomy_update_category_in_mpx($term_id, $term_name, $parent_id, 
   }
 }
 
+/**
+ * Deletes a category in mpx
+ * @param $mpx_id
+ * @return bool
+ */
 function _mpx_taxonomy_delete_category_in_mpx($mpx_id) {
   if(media_theplatform_mpx_check_token()) {
     $mpx_token = media_theplatform_mpx_variable_get('token');
@@ -452,6 +570,11 @@ function _mpx_taxonomy_delete_category_in_mpx($mpx_id) {
   }
 }
 
+/**
+ * Checks whether a provided vocabulary is empty
+ * @param $vid
+ * @return bool
+ */
 function _mpx_taxonomy_check_empty_taxonomy($vid) {
   $tree = taxonomy_get_tree($vid);
   if(count($tree))
@@ -460,6 +583,10 @@ function _mpx_taxonomy_check_empty_taxonomy($vid) {
     return true;
 }
 
+/**
+ * Checks whether there are any categories in mpx
+ * @return bool
+ */
 function _mpx_taxonomy_check_empty_mpx_categories() {
   $categories = _mpx_taxonomy_get_categories();
   if(count($categories))

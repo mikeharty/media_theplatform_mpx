@@ -107,6 +107,11 @@ function media_theplatform_mpx_node_field_map_form($form, $form_state) {
   }
 }
 
+/**
+ * Submit handler for node field -> file field mappings form
+ * @param $form
+ * @param $form_state
+ */
 function media_theplatform_mpx_node_field_map_form_submit($form, $form_state) {
   $content_type = arg(4);
   $fields = array();
