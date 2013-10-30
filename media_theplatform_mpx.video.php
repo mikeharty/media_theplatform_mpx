@@ -6,10 +6,10 @@
 
 
 /**
- * Query thePlatform Media Notify service to get Media id's that have changed.
+ * Query thePlatform Media Notify service to get Media IDs that have changed.
  *
  * @param String $since
- *   The last notfication ID from thePlatform used to Sync mpxMedia.
+ *   The last notification ID from thePlatform used to Sync mpxMedia.
  *
  * @return Array
  *   Array of mpxMedia id's that have changed since $since.
@@ -21,7 +21,7 @@ function media_theplatform_mpx_get_changed_ids($since) {
     $result_data = drupal_json_decode($result->data);
     if (isset($result_data) && count($result_data) > 0) {
 
-      // Initalize arrays to store active and deleted id's.
+      // Initialize arrays to store active and deleted IDs
       $actives = array();
       $deletes = array();
 
@@ -48,7 +48,7 @@ function media_theplatform_mpx_get_changed_ids($since) {
           }
         }
       }
-      // Remove any deletes from actives, because it causes errors when updating.
+      // Remove any deletes from actives because it causes errors when updating.
       $actives = array_diff($actives, $deletes);
       return array(
         'actives' => $actives,
@@ -79,7 +79,7 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
     $id_array = explode(',', $ids);
     $ids = '/' . $ids;
   }
-  // Initalize arrays to store mpxMedia data.
+  // Initialize arrays to store mpxMedia data.
   $videos = array();
   $published_ids = array();
   $unpublished_ids = array();
@@ -104,7 +104,8 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
         }
       }
       // If only one row, result_data holds all the mpxMedia data (if its published).
-      // If responseCode is returned, it means 1 id in $ids has been unpublished and would return no data.
+      // If responseCode is returned, it means 1 id in $ids has been unpublished and
+      // would return no data.
       elseif (!isset($result_data['responseCode'])) {
         $video = $result_data;
         $published_ids[] = basename($video['id']);
@@ -137,7 +138,7 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
 }
 
 /**
- * Imports all Videos into Media Library.
+ * Imports all videos into Media Library.
  *
  * @param String $type
  *   Import type. Possible values 'cron' or 'manual', for sync.
