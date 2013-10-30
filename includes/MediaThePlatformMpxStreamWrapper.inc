@@ -65,7 +65,8 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
     // If this is a video clip:
     if ($parts['mpx_type'] == 'video') {
       // Look up thumbnail and return URL to it.
-      return media_theplatform_mpx_get_thumbnail_url($parts['mpx_id']);
+      // Return the encoded url
+      return $this->encodePath(media_theplatform_mpx_get_thumbnail_url($parts['mpx_id']));
     }
     // Else for players, return mpx logo.
     elseif ($parts['mpx_type'] == 'player') {
@@ -91,4 +92,9 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
     }
   }
 
+  function encodePath($path) {
+    $inputpattern = array("/%3a/i", "/%2f/i");
+    $outputpattern = array(":", "/");
+    return preg_replace ($inputpattern, $outputpattern, rawurlencode($path));
+  }
 }
