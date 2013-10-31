@@ -245,3 +245,10 @@ function media_theplatform_mpx_uninstall() {
   }
   return array(array('success' => TRUE, 'query' => "Deleted all variables in the Media: mpx namespace."));
 }
+
+/**
+ * Adds support for separate mimetypes for players and videos
+ */
+function media_theplatform_mpx_update_7200() {
+  db_query("UPDATE file_managed m SET m.filemime = 'player/mpx' WHERE m.uri LIKE 'mpx://p/%'");
+}

@@ -53,7 +53,7 @@ function media_theplatform_mpx_add_player_head_recursive($item, $key) {
     $fids = media_theplatform_mpx_extract_fids($item);
   }
   // Else check if this is a file object:
-  elseif ($key == '#file' && is_object($item) && isset($item->filename) && $item->filemime == 'video/mpx') {
+  elseif ($key == '#file' && is_object($item) && isset($item->filename) && $item->filemime == 'player/mpx') {
     $fids[] = $item->fid;
   }
   // If we found files:
@@ -234,7 +234,7 @@ function media_theplatform_mpx_media_parse($embed_code) {
  */
 function media_theplatform_mpx_file_delete($file) {
   // If its a mpx file, delete its record in mpx_player or mpx_video.
-  if ($file->filemime == 'video/mpx') {
+  if ($file->filemime == 'video/mpx' || $file->filemime == 'player/mpx') {
     $wrapper = file_stream_wrapper_get_instance_by_uri($file->uri);
     $parts = $wrapper->get_parameters();
 

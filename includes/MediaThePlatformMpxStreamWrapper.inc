@@ -57,7 +57,14 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
   }
 
   static function getMimeType($uri, $mapping = NULL) {
-    return 'video/mpx';
+    $uri_parts = parse_url($uri);
+    if ($uri_parts['host'] == 'm') {
+      return 'video/mpx';
+    }
+    else if ($uri_parts['host'] == 'p') {
+      return 'player/mpx';
+    }
+    return '';
   }
 
   function getOriginalThumbnailPath() {
