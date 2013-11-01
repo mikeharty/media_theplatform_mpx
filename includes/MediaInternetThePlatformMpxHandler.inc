@@ -48,12 +48,21 @@ class MediaInternetThePlatformMpxHandler extends MediaInternetBaseHandler {
   }
 
   /**
+   * Get file type by mimetype.
+   */
+  public function getFileType($mime_type) {
+    $file_type = 'video';
+    drupal_alter('media_theplatform_mpx_file_type', $file_type, $mime_type);
+    return $file_type;
+  }
+
+  /**
    * Return mpx File Object with type video.
    */
   public function getFileObject() {
     $uri = $this->parse($this->embedCode);
     $file = file_uri_to_object($uri);
-    $file->type = 'video';
+    $file->type = $this->getFileType($file->filemime);
     return $file;
   }
 
