@@ -53,7 +53,7 @@ function media_theplatform_mpx_add_player_head_recursive($item, $key) {
     $fids = media_theplatform_mpx_extract_fids($item);
   }
   // Else check if this is a file object:
-  elseif ($key == '#file' && is_object($item) && isset($item->filename) && $item->filemime == 'player/mpx') {
+  elseif ($key == '#file' && is_object($item) && isset($item->filename) && ($item->filemime == 'video/mpx' || $item->filemime == 'player/mpx')) {
     $fids[] = $item->fid;
   }
   // If we found files:
