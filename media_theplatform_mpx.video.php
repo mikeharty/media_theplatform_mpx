@@ -543,6 +543,10 @@ function media_theplatform_mpx_set_mpx_video_inactive($id, $op) {
   ->fields(array('status' => 0))
   ->condition('id', $id, '=')
   ->execute();
+
+  // Let other modules perform operations when videos are disabled.
+  module_invoke_all('media_theplatform_mpx_set_video_inactive', $id, $op);
+
   // Write mpx_log record.
   // @todo: Set type_id to $id once type_id gets changed to varchar.
   global $user;
