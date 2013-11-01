@@ -140,6 +140,11 @@ function media_theplatform_mpx_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'player_id' => array(
+        'description' => 'player_id field in mpx_video.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
       'account' => array(
         'description' => 'Account in thePlatform',
         'type' => 'varchar',
@@ -244,6 +249,23 @@ function media_theplatform_mpx_uninstall() {
     media_theplatform_mpx_variable_del($variable);
   }
   return array(array('success' => TRUE, 'query' => "Deleted all variables in the Media: mpx namespace."));
+}
+
+/**
+ * Add player_id field to mpx_video table.
+ */
+function media_theplatform_mpx_update_7201() {
+  $default_player_fid = media_theplatform_mpx_variable_get('default_player_fid', '');
+  $default_player_id = db_query('SELECT player_id FROM {mpx_player} WHERE fid = :fid',
+    array(':fid' => $default_player_fid))->fetchField();
+
+  $player_id_field = array(
+    'description' => 'player_id field in mpx_video.',
+    'type' => 'int',
+    'not null' => FALSE,
+  );
+
+  db_add_field('mpx_video', 'player_id', $player_id_field);
 }
 
 /**

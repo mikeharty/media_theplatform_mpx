@@ -404,6 +404,17 @@ function media_theplatform_mpx_get_mpx_player_by_fid($fid) {
 }
 
 /**
+ * Returns associative array of mpx_player data for given player player_id.
+ */
+function media_theplatform_mpx_get_mpx_player_by_player_id($player_id) {
+  return db_select('mpx_player', 'p')
+    ->fields('p')
+    ->condition('player_id', $player_id, '=')
+    ->execute()
+    ->fetchAssoc();
+}
+
+/**
  * Returns total number of records in mpx_player table.
  */
 function media_theplatform_mpx_get_mpx_player_count() {

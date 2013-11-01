@@ -315,6 +315,7 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL) {
       'guid' => $video['guid'],
       'description' => $video['description'],
       'fid' => $fid,
+      'player_id' => NULL,
       'account' => media_theplatform_mpx_variable_get('import_account'),
       'thumbnail_url' => $video['thumbnail_url'],
       'created' => $timestamp,
@@ -323,6 +324,7 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL) {
       'id' => $video['id'],
     ))
     ->execute();
+
   // Load default mpxPlayer for appending to Filename.
   $player = media_theplatform_mpx_get_mpx_player_by_fid($player_id);
   media_theplatform_mpx_update_video_filename($fid, $video['title'], $player['title']);
