@@ -70,6 +70,7 @@ function media_theplatform_mpx_get_changed_ids($since) {
  *   Returns multi dimensional array: data for published ids, and array of published ids.
  */
 function media_theplatform_mpx_get_mpxmedia($ids) {
+
   $token = media_theplatform_mpx_variable_get('token');
   $account = urlencode(media_theplatform_mpx_variable_get('account_id'));
   if ($ids == 'all') {
@@ -87,6 +88,7 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
   // Get all Media that HasReleases (published) and belongs to import account id.
   $url = 'http://data.media.theplatform.com/media/data/Media' . $ids . '?schema=1.4.0&form=json&pretty=true&byOwnerId=' . $account . '&byContent=byHasReleases%3Dtrue&token=' . $token;
   $result = drupal_http_request($url);
+
   if (isset($result->data)) {
     $result_data = drupal_json_decode($result->data);
     if ($result_data) {
@@ -94,13 +96,18 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
       if (isset($result_data['entryCount'])) {
         foreach ($result_data['entries'] as $video) {
           $published_ids[] = basename($video['id']);
-          $videos[] = array(
+          $video_item = array(
             'id' => basename($video['id']),
             'guid' => $video['guid'],
             'title' => $video['title'],
             'description' => $video['description'],
             'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
           );
+
+          // Allow modules to alter the video item for pulling in custom metadata.
+          drupal_alter('media_theplatform_mpx_media_import_item', $video_item, $video);
+
+          $videos[] = $video_item;
         }
       }
       // If only one row, result_data holds all the mpxMedia data (if its published).
@@ -109,13 +116,18 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
       elseif (!isset($result_data['responseCode'])) {
         $video = $result_data;
         $published_ids[] = basename($video['id']);
-        $videos[] = array(
+        $video_item = array(
           'id' => basename($video['id']),
           'guid' => $video['guid'],
           'title' => $video['title'],
           'description' => $video['description'],
           'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
         );
+
+        // Allow modules to alter the video item for pulling in custom metadata.
+        drupal_alter('media_theplatform_mpx_media_import_item', $video_item, $video);
+
+        $videos[] = $video_item;
       }
       // Store any ids that have been unpublished.
       if (isset($id_array)) {
@@ -204,6 +216,8 @@ function media_theplatform_mpx_import_all_videos($type) {
     foreach ($videos['published'] as $video) {
       // Import this video.
       $op = media_theplatform_mpx_import_video($video);
+      // Allow modules to perform additional media import tasks.
+      module_invoke_all('media_theplatform_mpx_import_media', $op, $video);
       if ($op == 'insert') {
         $num_inserted++;
       }
@@ -403,6 +417,7 @@ function media_theplatform_mpx_update_video($video) {
   // Now, the next time file is loaded, MediaThePlatformMpxStreamWrapper
   // will call getOriginalThumbnail to update image.
   image_path_flush($image_path);
+
   // Write mpx_log record.
   global $user;
   $log = array(
