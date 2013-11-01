@@ -305,7 +305,7 @@ function media_theplatform_mpx_import_video($video) {
  */
 function media_theplatform_mpx_insert_video($video, $fid = NULL) {
   $timestamp = REQUEST_TIME;
-  $player_id = media_theplatform_mpx_variable_get('default_player_fid');
+  $player_id = !empty($video['player_id']) ? $video['player_id'] : media_theplatform_mpx_variable_get('default_player_fid');
 
   // If file doesn't exist, write it to file_managed.
   if (!$fid) {
@@ -329,7 +329,7 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL) {
       'guid' => $video['guid'],
       'description' => $video['description'],
       'fid' => $fid,
-      'player_id' => NULL,
+      'player_id' => !empty($video['player_id']) ? $video['player_id'] : null,
       'account' => media_theplatform_mpx_variable_get('import_account'),
       'thumbnail_url' => $video['thumbnail_url'],
       'created' => $timestamp,
