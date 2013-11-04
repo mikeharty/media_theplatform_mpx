@@ -25,7 +25,7 @@
           if(timeCode.indexOf('m') > 0) {
             minIndex = timeCode.indexOf('m');
             var minutes = timeCode.substring(0, minIndex);
-            seek += minutes*60*1000;
+            seek += minutes*60000;
           }
           if(timeCode.indexOf('s') > 0) {
             var secondsOffset = 0;

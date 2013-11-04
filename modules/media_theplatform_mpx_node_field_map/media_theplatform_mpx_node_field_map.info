@@ -1,5 +1,5 @@
-name = Media: ThePlatform mpx video to node field mapping
-description = Provides mapping between mpxVideo entity fields and node fields.
+name = Media: ThePlatform mpx Node Field Mapping
+description = Provides mapping between node fields and mpxVideo fields.
 package = "Media"
 core = 7.x
 dependencies[] = media (>=7.x-2.0-alpha2)

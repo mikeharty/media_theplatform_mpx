@@ -778,7 +778,6 @@ function _mpx_finish_upload($upload_server, $cookie_file, $mpx_token, $account_i
  * @return array
  */
 function _mpx_format($extension) {
-  $mpx_format = null;
   if(!$formats = cache_get('mpx_upload:xml_formats')) {
     $formats_XML = simplexml_load_file('http://web.theplatform.com/descriptors/enums/format.xml');
     $formats = array();
@@ -792,7 +791,7 @@ function _mpx_format($extension) {
     $formats = $formats->data;
   }
   if(isset($formats[$extension]))
-    return array('status' => 'success', 'response' => $mpx_format);
+    return array('status' => 'success', 'response' => $formats[$extension]);
   else
     return array('status' => 'error', 'response' => t('MPX format not found for extension: @extension', array('@extension' => $extension)));
 }
