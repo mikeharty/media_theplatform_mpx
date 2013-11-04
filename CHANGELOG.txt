@@ -4,7 +4,7 @@ Media: thePlatform mpx 7.x-2.3
 - Added JS and iFrame embed methods
 - Added alter hooks for developers
 - Separate mimetypes for players and videos
-
+- Code cleanup
 
 Media: thePlatform mpx 7.x-2.2
 ------------------------------------------
