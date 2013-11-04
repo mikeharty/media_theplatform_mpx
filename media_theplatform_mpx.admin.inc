@@ -25,11 +25,11 @@ function media_theplatform_mpx_page_account() {
       $output .= '<div class="message">' . t('The current Import Account (:name) was not found in thePlatform; it may have been disabled or deleted.  Please select a new Account to use as the Import Account.', array(':name' => rawurldecode($import_account))) . '</div>';
     }
     elseif ($import_account) {
-      $cron_form = drupal_get_form('media_theplatform_mpx_form_cron_settings');
+      $settings_form = drupal_get_form('media_theplatform_mpx_form_settings');
     }
     $form_account = drupal_get_form('media_theplatform_mpx_form_account_theplatform', $account_list);
     $output .= render($form_account);
-    $output .= render($cron_form);
+    $output .= render($settings_form);
   }
   return $output;
 }
@@ -175,7 +175,7 @@ function media_theplatform_mpx_check_account_settings() {
  *
  * @ingroup forms
  */
-function media_theplatform_mpx_form_cron_settings() {
+function media_theplatform_mpx_form_settings() {
   $form['cron'] = array(
     '#type' => 'fieldset',
     '#title' => t('Cron Settings'),
@@ -192,9 +192,20 @@ function media_theplatform_mpx_form_cron_settings() {
     '#title' => t('Sync mpxPlayers on Cron'),
     '#default_value' => media_theplatform_mpx_variable_get('cron_players'),
   );
+  $form['embed_method'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Embed Method'),
+    '#collapsible' => FALSE,
+    '#collapsed' => FALSE,
+  );
+  $form['embed_method'][media_theplatform_mpx_NAMESPACE . 'embed_method'] = array(
+    '#type' => 'radios',
+    '#title' => t('Embed Method'),
+    '#default_value' => media_theplatform_mpx_variable_get('embed_method', 0),
+    '#options' => array(0 => t('HTML with Javascript (Legacy)'), 1 => t('Javascript (Preferred)'), 2 => t('iFrame')),
+  );
   return system_settings_form($form);
 }
-
 
 /******************* mpxPlayers *****************************/
 

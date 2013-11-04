@@ -102,6 +102,7 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
             'title' => $video['title'],
             'description' => $video['description'],
             'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
+            'release_id' => $video['media$content'][0]['plfile$releases'][0]['plrelease$pid'],
           );
 
           // Allow modules to alter the video item for pulling in custom metadata.
@@ -122,6 +123,7 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
           'title' => $video['title'],
           'description' => $video['description'],
           'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
+          'release_id' => $video['media$content'][0]['plfile$releases'][0]['plrelease$pid'],
         );
 
         // Allow modules to alter the video item for pulling in custom metadata.
@@ -332,6 +334,7 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL) {
       'player_id' => !empty($video['player_id']) ? $video['player_id'] : null,
       'account' => media_theplatform_mpx_variable_get('import_account'),
       'thumbnail_url' => $video['thumbnail_url'],
+      'release_id' => $video['release_id'],
       'created' => $timestamp,
       'updated' => $timestamp,
       'status' => 1,
@@ -403,6 +406,7 @@ function media_theplatform_mpx_update_video($video) {
       'description' => $video['description'],
       'thumbnail_url' => $video['thumbnail_url'],
       'status' => 1,
+      'release_id' => $video['release_id'],
       'updated' => $timestamp,
       'id' => $video['id'],
     ))

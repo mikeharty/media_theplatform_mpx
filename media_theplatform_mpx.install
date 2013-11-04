@@ -72,6 +72,14 @@ function media_theplatform_mpx_schema() {
         'type' => 'blob',
         'description' => 'HTML in the <head> tag',
       ),
+      'height' => array(
+        'description' => 'height of the player',
+        'type' => 'int',
+      ),
+      'width' => array(
+        'description' => 'width of the player',
+        'type' => 'int',
+      ),
       'player_data' => array(
         'type' => 'blob',
         'description' => 'Serialized array of player data',
@@ -144,6 +152,13 @@ function media_theplatform_mpx_schema() {
         'description' => 'player_id field in mpx_video.',
         'type' => 'int',
         'not null' => FALSE,
+      ),
+      'release_id' => array(
+        'description' => 'Release ID (used for JS and iFrame embeds)',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
       ),
       'account' => array(
         'description' => 'Account in thePlatform',
@@ -252,6 +267,13 @@ function media_theplatform_mpx_uninstall() {
 }
 
 /**
+ * Adds support for separate mimetypes for players and videos
+ */
+function media_theplatform_mpx_update_7200() {
+  db_query("UPDATE file_managed m SET m.filemime = 'player/mpx' WHERE m.uri LIKE 'mpx://p/%'");
+}
+
+/**
  * Add player_id field to mpx_video table.
  */
 function media_theplatform_mpx_update_7201() {
@@ -269,8 +291,38 @@ function media_theplatform_mpx_update_7201() {
 }
 
 /**
- * Adds support for separate mimetypes for players and videos
+ * Add height and width fields to player table
  */
-function media_theplatform_mpx_update_7200() {
-  db_query("UPDATE file_managed m SET m.filemime = 'player/mpx' WHERE m.uri LIKE 'mpx://p/%'");
+function media_theplatform_mpx_update_7202() {
+  $height_field = array(
+    'description' => 'height of the player',
+    'type' => 'int',
+  );
+  $width_field = array(
+    'description' => 'width of the player',
+    'type' => 'int',
+  );
+  db_add_field('mpx_player', 'height', $height_field);
+  db_add_field('mpx_player', 'width', $width_field);
+
+  // Update existing players
+  media_theplatform_mpx_import_all_players();
+}
+
+/**
+ * Add release_id field to video table
+ */
+function media_theplatform_mpx_update_7203() {
+  $release_id_field = array(
+    'description' => 'Release ID (used for JS embed)',
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => '',
+  );
+  db_add_field('mpx_video', 'release_id', $release_id_field);
+
+  // Update existing videos
+  media_theplatform_mpx_variable_set('last_notification', 0);
+  media_theplatform_mpx_import_all_videos('update');
 }
