@@ -545,7 +545,6 @@ function media_theplatform_mpx_get_thumbnail_url($guid) {
  * Returns most recent notification sequence number from thePlatform.
  */
 function media_theplatform_mpx_set_last_notification() {
-
   $url = 'http://data.media.theplatform.com/media/notify?token=' . media_theplatform_mpx_variable_get('token') . '&account=' . media_theplatform_mpx_variable_get('import_account') . '&filter=Media&clientId=drupal_media_theplatform_mpx_' . media_theplatform_mpx_variable_get('account_pid');
   $result = drupal_http_request($url);
   $result_data = drupal_json_decode($result->data);

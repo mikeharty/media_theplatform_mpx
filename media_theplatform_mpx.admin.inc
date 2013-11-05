@@ -486,11 +486,13 @@ function media_theplatform_mpx_page_mpx_file_mapping_form($form, $form_state) {
   );
   foreach($drupal_fields as $drupal_field_id => $drupal_field_label) {
     $field_options = array();
-    $fi = field_info_field($drupal_field_id);
-    // We're only mapping taxonomy fields which use the vocabulary configured to be synced
-    if($fi['type'] == 'taxonomy_term_reference') {
+    $field_info = field_info_field($drupal_field_id);
+    // Taxonomies receive special handling: we're only mapping taxonomy fields
+    // which use the vocabulary configured to be synced and can accept unlimited values
+    // because MPX categories accept unlimited values.
+    if($field_info['type'] == 'taxonomy_term_reference' && $field_info['cardinality'] == "-1") {
       if($sync_vid = media_theplatform_mpx_variable_get('sync_vocabulary', false)) {
-        $vocabulary_name = $fi['settings']['allowed_values'][0]['vocabulary'];
+        $vocabulary_name = $field_info['settings']['allowed_values'][0]['vocabulary'];
         $vid = db_select('taxonomy_vocabulary', 't')
           ->fields('t', array('vid'))
           ->condition('machine_name', $vocabulary_name, '=')

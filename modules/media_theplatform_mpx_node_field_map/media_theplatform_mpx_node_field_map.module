@@ -62,9 +62,9 @@ function media_theplatform_mpx_node_field_map_form($form, $form_state) {
 
     $instances = field_info_instances('node', arg(4));
     $node_fields = array();
-
     $default_values = unserialize(media_theplatform_mpx_variable_get('node_field_map'));
     $default_values = $default_values[arg(4)];
+
     foreach($instances as $id => $val) {
       $node_fields[$id] = $val['label'];
     }
@@ -73,14 +73,14 @@ function media_theplatform_mpx_node_field_map_form($form, $form_state) {
       '#tree' => TRUE,
       '#theme' => 'media_theplatform_mpx_node_field_map_table'
     );
+
+
     foreach($node_fields as $node_field_id => $node_field_label) {
       $field_options = array();
-      // All other field types
       foreach($file_fields as $file_field_id => $file_field) {
         if(_mpx_node_fields_check_compatibility($node_field_id, $file_field_id))
           $field_options[$file_field_id] = $file_field['title'];
       }
-      // If we have options, build the form row
       if(count($field_options)) {
         $form['fields'][$node_field_id]['node_field'] = array(
           '#type' => 'markup',
