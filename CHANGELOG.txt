@@ -6,6 +6,7 @@ Media: thePlatform mpx 7.x-2.3
 - Separate mimetypes for players and videos
 - Code cleanup
 - Added submodule "upload" to enable uploading of mpxMedia assets to MPX
+- Added basic file field syncing capability
 
 
 Media: thePlatform mpx 7.x-2.2

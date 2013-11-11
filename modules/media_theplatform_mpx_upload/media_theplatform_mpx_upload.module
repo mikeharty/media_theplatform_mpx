@@ -82,6 +82,9 @@ function media_theplatform_mpx_upload_media_browser_plugin_info() {
  * @param $published_video
  */
 function media_theplatform_mpx_upload_published($published_video) {
+  // Run cron so the video gets updated
+  media_theplatform_mpx_import_all_videos('cron');
+
   $nodes = array();
   $files = array();
   if(media_theplatform_mpx_variable_get('auto_publish', 0)) {
@@ -111,7 +114,6 @@ function media_theplatform_mpx_upload_published($published_video) {
     }
   }
   // Allow other modules to hook at this point
-  //@todo: Document this
   module_invoke_all('media_theplatform_mpx_upload_published', $published_video, $nodes, $files);
 }
 

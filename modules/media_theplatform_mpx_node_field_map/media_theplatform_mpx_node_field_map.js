@@ -27,14 +27,15 @@
                 case 'checkbox':
                   if(parentField.is(':checked') && parentField.val() == childField.val()) {
                     childField.attr("checked", "checked");
+                    // this breaks the each() if a match is made
                     return false;
                   }
                   break;
                 default:
                   childField.val(parentField.val());
+                    // this breaks the each() if a match is made
+                  return false;
               }
-              // Break the inner loop
-              return false;
             }
           });
         }

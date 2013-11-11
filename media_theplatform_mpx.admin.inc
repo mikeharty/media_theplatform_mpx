@@ -231,7 +231,7 @@ function media_theplatform_mpx_form_settings() {
  */
 function media_theplatform_mpx_form_settings_validate($form, &$form_state) {
   $taxonomy = $form_state['values']['media_theplatform_mpx__sync_vocabulary'];
-  if($taxonomy) {
+  if($taxonomy && $taxonomy != media_theplatform_mpx_variable_get('sync_vocabulary')) {
     if(!_mpx_taxonomy_check_empty_taxonomy($taxonomy) && !_mpx_taxonomy_check_empty_mpx_categories())
       form_set_error('media_theplatform_mpx__sync_vocabulary', t('The selected taxonomy could not be used because it contains existing terms, and there are existing categories in mpx. You must either choose an empty taxonomy, or have no existing categories defined in mpx.'));
     else {

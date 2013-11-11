@@ -308,8 +308,6 @@ function media_theplatform_mpx_import_video($video) {
  * @param int $fid
  *   File fid of Video's File in file_managed if it already exists
  *   NULL if it doesn't exist
- * @param null $player_id
- *   The upload form can provide a player id for a new video
  * @return String
  *   Returns 'insert' for counters in media_theplatform_mpx_import_all_videos()
  */
@@ -342,7 +340,7 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL) {
       'player_id' => !empty($video['player_id']) ? $video['player_id'] : null,
       'account' => media_theplatform_mpx_variable_get('import_account'),
       'thumbnail_url' => $video['thumbnail_url'],
-      'release_id' => $video['release_id'],
+      'release_id' => !empty($video['release_id']) ? $video['release_id'] : '',
       'created' => $timestamp,
       'updated' => $timestamp,
       'status' => 1,
@@ -446,6 +444,7 @@ function media_theplatform_mpx_update_video($video) {
       'guid' => $video['guid'],
       'description' => $video['description'],
       'thumbnail_url' => $video['thumbnail_url'],
+      'release_id' => $video['release_id'],
       'status' => 1,
       'updated' => $timestamp,
       'id' => $video['id'],

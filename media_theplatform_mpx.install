@@ -389,7 +389,7 @@ function media_theplatform_mpx_update_7203() {
   );
   db_add_field('mpx_video', 'release_id', $release_id_field);
 
-  // Update existing videos
-  media_theplatform_mpx_variable_set('last_notification', 0);
+  // Set the last notification to 1, this forces an update on all videos
+  media_theplatform_mpx_variable_set('last_notification', 1);
   media_theplatform_mpx_import_all_videos('update');
 }

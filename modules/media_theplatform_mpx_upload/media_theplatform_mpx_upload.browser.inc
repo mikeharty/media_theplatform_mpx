@@ -155,10 +155,11 @@ function ajax_mpx_media_upload_callback($form, $form_state) {
   $video_array['description'] = '';
   $video_array['thumbnail_url'] = '';
   $video_array['fields'] = $fields;
+  $video_array['player_id'] = $video->player;
 
-  media_theplatform_mpx_insert_video($video_array, null, $video->player);
+  media_theplatform_mpx_insert_video($video_array, null);
 
-  $uri = 'mpx://m/' . $video_array['guid'] . '/p/' . $video->player;
+  $uri = 'mpx://m/' . $video_array['guid'] . '/p/' . $video_array['player_id'];
 
   $commands = array();
   $commands[] = ajax_command_mpx_media_upload($uri);

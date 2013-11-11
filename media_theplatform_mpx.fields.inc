@@ -99,7 +99,7 @@ function _mpx_fields_extract_mpx_field_values($data, $file_field_map) {
 }
 
 /**
- * Adds mapped Drupal fields to media object for insertion to MPX.
+ * Adds mapped Drupal file fields to media object for insertion to MPX.
  * @param $media_object
  * @param $fields
  * @param bool $update (optional, changes the structure of the returned media object)
