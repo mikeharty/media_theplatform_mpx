@@ -37,12 +37,15 @@ define('MPX_WF_BASE', 'http://data.workflow.theplatform.com');
  * Implements hook_page_build().
  */
 function media_theplatform_mpx_page_build(&$page) {
-  $page_array_text = print_r($page, TRUE);
-  // Sometimes the page array contains recursion, like on the node edit form.
-  $infinite = strpos($page_array_text, '*RECURSION*');
-  // Only extract file ID's if we're on a page array with no recursion.
-  if ($infinite === FALSE) {
-    array_walk_recursive($page, 'media_theplatform_mpx_add_player_head_recursive');
+  // This is now only used if the HTML+JS embed method is enabled
+  if(media_theplatform_mpx_variable_get('embed_method', 0) == 0) {
+    $page_array_text = print_r($page, TRUE);
+    // Sometimes the page array contains recursion, like on the node edit form.
+    $infinite = strpos($page_array_text, '*RECURSION*');
+    // Only extract file ID's if we're on a page array with no recursion.
+    if ($infinite === FALSE) {
+      array_walk_recursive($page, 'media_theplatform_mpx_add_player_head_recursive');
+    }
   }
 }
 
@@ -50,8 +53,11 @@ function media_theplatform_mpx_page_build(&$page) {
  * Implements hook_preprocess_panels_pane().
  */
 function media_theplatform_mpx_preprocess_panels_pane(&$vars) {
-  // This will add MPX JS/CSS for any nodes displayed as "full" in Panels panes that have MPX Files embedded.
-  array_walk_recursive($vars, 'media_theplatform_mpx_add_player_head_recursive');
+  // This is now only used if the HTML+JS embed method is enabled
+  if(media_theplatform_mpx_variable_get('embed_method', 0) == 0) {
+    // This will add MPX JS/CSS for any nodes displayed as "full" in Panels panes that have MPX Files embedded.
+    array_walk_recursive($vars, 'media_theplatform_mpx_add_player_head_recursive');
+  }
 }
 
 /**
@@ -69,7 +75,7 @@ function media_theplatform_mpx_add_player_head_recursive($item, $key) {
     $fids = media_theplatform_mpx_extract_fids($item);
   }
   // Else check if this is a file object:
-  elseif ($key == '#file' && is_object($item) && isset($item->filename) && $item->filemime == 'video/mpx') {
+  elseif ($key == '#file' && is_object($item) && isset($item->filename) && ($item->filemime == 'video/mpx' || $item->filemime == 'player/mpx')) {
     $fids[] = $item->fid;
   }
   // If we found files:
@@ -131,7 +137,7 @@ function media_theplatform_mpx_add_player_head($fids) {
           drupal_add_html_head($element, $key);
         }
       }
-      media_theplatform_mpx_variable_set('enable_deep_link', 1);
+
       // Add mpxPlayer seek JS, if enabled
       if(media_theplatform_mpx_variable_get('enable_deep_link', 0)) {
         drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx').'/js/media_theplatform_mpx.deeplink.js');
@@ -169,18 +175,19 @@ function media_theplatform_mpx_menu() {
     'title' => 'mpxPlayers',
     'page callback' => 'media_theplatform_mpx_page_mpx_players',
     'type' => MENU_LOCAL_TASK,
-    'access arguments' => array('administer media'),
+    'access callback' => '_media_theplatform_mpx_access',
     'weight' => 30,
   );
   $items[MPX_PATH_VIDEO] = array(
     'title' => 'mpxMedia',
     'page callback' => 'media_theplatform_mpx_page_mpx_videos',
     'type' => MENU_LOCAL_TASK,
-    'access arguments' => array('administer media'),
+    'access callback' => '_media_theplatform_mpx_access',
     'weight' => 40,
   );
   return $items;
 }
+
 /**
  * Implements hook_init().
  */
@@ -272,7 +279,7 @@ function media_theplatform_mpx_media_parse($embed_code) {
  */
 function media_theplatform_mpx_file_delete($file) {
   // If its a mpx file, delete its record in mpx_player or mpx_video.
-  if ($file->filemime == 'video/mpx') {
+  if ($file->filemime == 'video/mpx' || $file->filemime == 'player/mpx') {
     $wrapper = file_stream_wrapper_get_instance_by_uri($file->uri);
     $parts = $wrapper->get_parameters();
 
@@ -327,7 +334,6 @@ function media_theplatform_mpx_file_delete($file) {
 
   }
 }
-
 /**
  * Implements hook_file_save().
  *
@@ -398,6 +404,17 @@ function media_theplatform_mpx_permission() {
       'description' => t('Can access Sync mpxMedia form.'),
     ),
   );
+}
+
+/**
+ * Access callback for videos / players listing
+ */
+function _media_theplatform_mpx_access() {
+  if (user_access('administer media') || user_access('administer files')) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /**

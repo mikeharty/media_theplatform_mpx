@@ -87,10 +87,10 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
   // Get all Media that HasReleases (published) and belongs to import account id.
   $url = 'http://data.media.theplatform.com/media/data/Media' . $ids . '?schema=1.4.0&form=json&pretty=true&byOwnerId=' . $account . '&byContent=byHasReleases%3Dtrue&token=' . $token;
   $result = drupal_http_request($url);
+
   if (isset($result->data)) {
     $result_data = drupal_json_decode($result->data);
     if ($result_data) {
-      $fields = array();
       $file_field_map = media_theplatform_mpx_variable_get('file_field_map', false);
       // Keys entryCount and entries are only set when there is more than 1 entry.
       if (isset($result_data['entryCount'])) {
@@ -99,31 +99,44 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
           $fields = array();
           if($file_field_map)
             $fields = _mpx_fields_extract_mpx_field_values($video, unserialize($file_field_map));
-          $videos[] = array(
+          $video_item = array(
             'id' => basename($video['id']),
             'guid' => $video['guid'],
             'title' => $video['title'],
             'description' => $video['description'],
             'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
+            'release_id' => $video['media$content'][0]['plfile$releases'][0]['plrelease$pid'],
             'fields' => $fields,
           );
+
+          // Allow modules to alter the video item for pulling in custom metadata.
+          drupal_alter('media_theplatform_mpx_media_import_item', $video_item, $video);
+
+          $videos[] = $video_item;
         }
       }
       // If only one row, result_data holds all the mpxMedia data (if its published).
-      // If responseCode is returned, it means 1 id in $ids has been unpublished and would return no data.
+      // If responseCode is returned, it means 1 id in $ids has been unpublished and
+      // would return no data.
       elseif (!isset($result_data['responseCode'])) {
         $video = $result_data;
         $published_ids[] = basename($video['id']);
         if($file_field_map)
           $fields = _mpx_fields_extract_mpx_field_values($video, unserialize($file_field_map));
-        $videos[] = array(
+        $video_item = array(
           'id' => basename($video['id']),
           'guid' => $video['guid'],
           'title' => $video['title'],
           'description' => $video['description'],
           'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
+          'release_id' => $video['media$content'][0]['plfile$releases'][0]['plrelease$pid'],
           'fields' => $fields,
         );
+
+        // Allow modules to alter the video item for pulling in custom metadata.
+        drupal_alter('media_theplatform_mpx_media_import_item', $video_item, $video);
+
+        $videos[] = $video_item;
       }
       // Store any ids that have been unpublished.
       if (isset($id_array)) {
@@ -146,7 +159,7 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
 }
 
 /**
- * Imports all Videos into Media Library.
+ * Imports all videos into Media Library.
  *
  * @param String $type
  *   Import type. Possible values 'cron' or 'manual', for sync.
@@ -158,6 +171,7 @@ function media_theplatform_mpx_get_mpxmedia($ids) {
  *   $data['num_inactives'] - # of videos changed from active to inactive
  */
 function media_theplatform_mpx_import_all_videos($type) {
+
   // Clicked on Videos Sync form.
   if ($type == 'manual') {
     global $user;
@@ -211,6 +225,8 @@ function media_theplatform_mpx_import_all_videos($type) {
     foreach ($videos['published'] as $video) {
       // Import this video.
       $op = media_theplatform_mpx_import_video($video);
+      // Allow modules to perform additional media import tasks.
+      module_invoke_all('media_theplatform_mpx_import_media', $op, $video);
       if ($op == 'insert') {
         $num_inserted++;
       }
@@ -297,9 +313,9 @@ function media_theplatform_mpx_import_video($video) {
  * @return String
  *   Returns 'insert' for counters in media_theplatform_mpx_import_all_videos()
  */
-function media_theplatform_mpx_insert_video($video, $fid = NULL, $player_id = NULL) {
+function media_theplatform_mpx_insert_video($video, $fid = NULL) {
   $timestamp = REQUEST_TIME;
-  $player_id = isset($player_id) ? $player_id : media_theplatform_mpx_variable_get('default_player_fid');
+  $player_id = !empty($video['player_id']) ? $video['player_id'] : media_theplatform_mpx_variable_get('default_player_fid');
 
   // If file doesn't exist, write it to file_managed.
   if (!$fid) {
@@ -323,14 +339,17 @@ function media_theplatform_mpx_insert_video($video, $fid = NULL, $player_id = NU
       'guid' => $video['guid'],
       'description' => $video['description'],
       'fid' => $fid,
+      'player_id' => !empty($video['player_id']) ? $video['player_id'] : null,
       'account' => media_theplatform_mpx_variable_get('import_account'),
       'thumbnail_url' => $video['thumbnail_url'],
+      'release_id' => $video['release_id'],
       'created' => $timestamp,
       'updated' => $timestamp,
       'status' => 1,
       'id' => $video['id'],
     ))
     ->execute();
+
   // Load default mpxPlayer for appending to Filename.
   $player = media_theplatform_mpx_get_mpx_player_by_fid($player_id);
   media_theplatform_mpx_update_video_filename($fid, $video['title'], $player['title']);
@@ -569,6 +588,10 @@ function media_theplatform_mpx_set_mpx_video_inactive($id, $op) {
   ->fields(array('status' => 0))
   ->condition('id', $id, '=')
   ->execute();
+
+  // Let other modules perform operations when videos are disabled.
+  module_invoke_all('media_theplatform_mpx_set_video_inactive', $id, $op);
+
   // Write mpx_log record.
   // @todo: Set type_id to $id once type_id gets changed to varchar.
   global $user;

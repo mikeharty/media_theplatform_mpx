@@ -40,12 +40,23 @@ function media_theplatform_mpx_get_players_from_theplatform() {
   foreach ($result_data['entries'] as $player) {
     // We only want mpxPlayers which are not disabled.
     if (!$player['plplayer$disabled']) {
+      // We want to capture the height and width properties, which requires a separate call
+      $pid = $player['plplayer$pid'];
+      $player_config_url = 'http://player.theplatform.com/p/' . media_theplatform_mpx_variable_get('account_pid') .
+        '/' . $pid . '/config/?' . $mpx_token . '&account=' . $mpx_account . '&schema=2.0&form=json';
+      $player_result = drupal_http_request($player_config_url);
+      $player_result = drupal_json_decode($player_result->data);
+      $width = $player_result['width'];
+      $height = $player_result['height'];
+
       $players[] = array(
         'id' => str_replace(media_theplatform_mpx_ID_PREFIX, '', $player['id']),
         'guid' => $player['guid'],
         'title' => $player['title'],
         'description' => $player['description'],
         'pid' => $player['plplayer$pid'],
+        'width' => $width,
+        'height' => $height,
       );
     }
   }
@@ -294,6 +305,8 @@ function media_theplatform_mpx_insert_player($player, $fid = NULL) {
       'head_html' => media_theplatform_mpx_get_player_html($player['pid'], 'head'),
       'body_html' => media_theplatform_mpx_get_player_html($player['pid'], 'body'),
       'player_data' => serialize(media_theplatform_mpx_extract_mpx_player_data($player['pid'])),
+      'width' => $player['width'],
+      'height' => $player['height'],
       'created' => $timestamp,
       'updated' => $timestamp,
       'status' => 1,
@@ -363,6 +376,8 @@ function media_theplatform_mpx_update_player($player, $fid) {
       'head_html' => media_theplatform_mpx_get_player_html($player['pid'], 'head'),
       'body_html' => media_theplatform_mpx_get_player_html($player['pid'], 'body'),
       'player_data' => serialize(media_theplatform_mpx_extract_mpx_player_data($player['pid'])),
+      'width' => $player['width'],
+      'height' => $player['height'],
       'status' => 1,
       'updated' => $timestamp,
     ))
@@ -399,6 +414,17 @@ function media_theplatform_mpx_get_mpx_player_by_fid($fid) {
   return db_select('mpx_player', 'p')
     ->fields('p')
     ->condition('fid', $fid, '=')
+    ->execute()
+    ->fetchAssoc();
+}
+
+/**
+ * Returns associative array of mpx_player data for given player player_id.
+ */
+function media_theplatform_mpx_get_mpx_player_by_player_id($player_id) {
+  return db_select('mpx_player', 'p')
+    ->fields('p')
+    ->condition('player_id', $player_id, '=')
     ->execute()
     ->fetchAssoc();
 }
