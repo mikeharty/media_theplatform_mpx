@@ -4,7 +4,6 @@
  * functions for Videos.
  */
 
-
 /**
  * Query thePlatform Media Notify service to get Media id's that have changed.
  *
@@ -21,7 +20,7 @@ function media_theplatform_mpx_get_changed_ids($since) {
     $result_data = drupal_json_decode($result->data);
     if (isset($result_data) && count($result_data) > 0) {
 
-      // Initalize arrays to store active and deleted id's.
+      // Initialize arrays to store active and deleted id's.
       $actives = array();
       $deletes = array();
 
