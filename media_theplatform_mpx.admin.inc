@@ -176,6 +176,30 @@ function media_theplatform_mpx_check_account_settings() {
  * @ingroup forms
  */
 function media_theplatform_mpx_form_settings() {
+  $form['cron'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Cron Settings'),
+    '#collapsible' => FALSE,
+    '#collapsed' => FALSE,
+  );
+  $form['cron'][media_theplatform_mpx_NAMESPACE . 'cron_videos_per_run'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Media Processing Limit'),
+    '#description' => t('The number of videos to pull from the media feed per cron run.'),
+    '#default_value' => media_theplatform_mpx_variable_get('cron_videos_per_run', 500),
+  );
+  $form['cron'][media_theplatform_mpx_NAMESPACE . 'cron_videos_timeout'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Media Feed Request Timeout'),
+    '#description' => t('The amount in seconds to wait for a response from a media feed request.'),
+    '#default_value' => media_theplatform_mpx_variable_get('cron_videos_timeout', 120),
+  );
+  $form['cron'][media_theplatform_mpx_NAMESPACE . 'cron_queue_processing_time'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Cron Queue Processing Time'),
+    '#description' => t('The amount of time to allot to the cron queue for processing during each cron run.'),
+    '#default_value' => media_theplatform_mpx_variable_get('cron_queue_processing_time', 180),
+  );
   $form['sync'] = array(
     '#type' => 'fieldset',
     '#title' => t('Synchronization Settings'),
@@ -194,16 +218,6 @@ function media_theplatform_mpx_form_settings() {
     '#empty_option' => t('- Select -'),
     '#default_value' => media_theplatform_mpx_variable_get('sync_vocabulary'),
     '#description' => t('Set the Drupal taxonomy which will synchronize with mpx categories. Nodes which use this vocabulary will automatically sync their terms with mpx. Leave empty to to disable vocabulary syncing.'),
-  );
-  $form['sync'][media_theplatform_mpx_NAMESPACE . 'cron_videos'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Sync mpxMedia on Cron'),
-    '#default_value' => media_theplatform_mpx_variable_get('cron_videos'),
-  );
-  $form['sync'][media_theplatform_mpx_NAMESPACE . 'cron_players'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Sync mpxPlayers on Cron'),
-    '#default_value' => media_theplatform_mpx_variable_get('cron_players'),
   );
   $form['embed_method'] = array(
     '#type' => 'fieldset',

@@ -258,6 +258,18 @@ function media_theplatform_mpx_ctools_plugin_api($owner, $api) {
   }
 }
 
+
+/**
+ * Implementation of hook_queue_info()
+ */
+function media_theplatform_mpx_cron_queue_info() {
+  $queues['media_theplatform_mpx_video_cron_queue'] = array(
+    'worker callback' => 'process_media_theplatform_mpx_video_cron_queue_item',
+    'time' => media_theplatform_mpx_variable_get('cron_queue_processing_time', 120),
+  );
+  return $queues;
+}
+
 /**
  * Implements hook_media_parse().
  *

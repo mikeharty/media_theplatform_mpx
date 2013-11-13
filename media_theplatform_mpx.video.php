@@ -19,7 +19,6 @@ function media_theplatform_mpx_get_changed_ids($since) {
   if (isset($result->data)) {
     $result_data = drupal_json_decode($result->data);
     if (isset($result_data) && count($result_data) > 0) {
-
       // Initialize arrays to store active and deleted id's.
       $actives = array();
       $deletes = array();
@@ -27,7 +26,7 @@ function media_theplatform_mpx_get_changed_ids($since) {
       foreach ($result_data as $changed) {
         // If no method has been returned, there are no changes.
         if (!isset($changed['method'])) {
-          return FALSE;
+          return false;
         }
         // Store last notification.
         $last_notification = $changed['id'];
@@ -47,6 +46,7 @@ function media_theplatform_mpx_get_changed_ids($since) {
           }
         }
       }
+
       // Remove any deletes from actives, because it causes errors when updating.
       $actives = array_diff($actives, $deletes);
       return array(
@@ -56,214 +56,7 @@ function media_theplatform_mpx_get_changed_ids($since) {
       );
     }
   }
-  return FALSE;
-}
-
-/**
- * Query thePlatform Media service to get all published mpxMedia files.
- *
- * @param String $ids
- *   If 'all', return all published mpxMedia for the account. Else its a string of ids.
- *
- * @return Array
- *   Returns multi dimensional array: data for published ids, and array of published ids.
- */
-function media_theplatform_mpx_get_mpxmedia($ids) {
-  $token = media_theplatform_mpx_variable_get('token');
-  $account = urlencode(media_theplatform_mpx_variable_get('account_id'));
-  if ($ids == 'all') {
-    $ids = '';
-  }
-  else {
-    $id_array = explode(',', $ids);
-    $ids = '/' . $ids;
-  }
-  // Initalize arrays to store mpxMedia data.
-  $videos = array();
-  $published_ids = array();
-  $unpublished_ids = array();
-
-  // Get all Media that HasReleases (published) and belongs to import account id.
-  $url = 'http://data.media.theplatform.com/media/data/Media' . $ids . '?schema=1.4.0&form=json&pretty=true&byOwnerId=' . $account . '&byContent=byHasReleases%3Dtrue&token=' . $token;
-  $result = drupal_http_request($url);
-
-  if (isset($result->data)) {
-    $result_data = drupal_json_decode($result->data);
-    if ($result_data) {
-      $file_field_map = media_theplatform_mpx_variable_get('file_field_map', false);
-      // Keys entryCount and entries are only set when there is more than 1 entry.
-      if (isset($result_data['entryCount'])) {
-        foreach ($result_data['entries'] as $video) {
-          $published_ids[] = basename($video['id']);
-          $fields = array();
-          if($file_field_map)
-            $fields = _mpx_fields_extract_mpx_field_values($video, unserialize($file_field_map));
-          $video_item = array(
-            'id' => basename($video['id']),
-            'guid' => $video['guid'],
-            'title' => $video['title'],
-            'description' => $video['description'],
-            'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
-            'release_id' => $video['media$content'][0]['plfile$releases'][0]['plrelease$pid'],
-            'fields' => $fields,
-          );
-
-          // Allow modules to alter the video item for pulling in custom metadata.
-          drupal_alter('media_theplatform_mpx_media_import_item', $video_item, $video);
-
-          $videos[] = $video_item;
-        }
-      }
-      // If only one row, result_data holds all the mpxMedia data (if its published).
-      // If responseCode is returned, it means 1 id in $ids has been unpublished and
-      // would return no data.
-      elseif (!isset($result_data['responseCode'])) {
-        $video = $result_data;
-        $published_ids[] = basename($video['id']);
-        if($file_field_map)
-          $fields = _mpx_fields_extract_mpx_field_values($video, unserialize($file_field_map));
-        $video_item = array(
-          'id' => basename($video['id']),
-          'guid' => $video['guid'],
-          'title' => $video['title'],
-          'description' => $video['description'],
-          'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
-          'release_id' => $video['media$content'][0]['plfile$releases'][0]['plrelease$pid'],
-          'fields' => $fields,
-        );
-
-        // Allow modules to alter the video item for pulling in custom metadata.
-        drupal_alter('media_theplatform_mpx_media_import_item', $video_item, $video);
-
-        $videos[] = $video_item;
-      }
-      // Store any ids that have been unpublished.
-      if (isset($id_array)) {
-        $unpublished_ids = array_diff($id_array, $published_ids);
-        // Filter out any ids which haven't been imported.
-        foreach ($unpublished_ids as $key => $unpublished_id) {
-          $video_exists = media_theplatform_mpx_get_mpx_video_by_field('id', $unpublished_id);
-          if (!$video_exists) {
-            unset($unpublished_ids[$key]);
-          }
-        }
-      }
-      return array(
-        'published' => $videos,
-        'unpublished' => $unpublished_ids,
-      );
-    }
-  }
-  return FALSE;
-}
-
-/**
- * Imports all videos into Media Library.
- *
- * @param String $type
- *   Import type. Possible values 'cron' or 'manual', for sync.
- *
- * @return Array
- *   $data['total'] - # of videos retrieved
- *   $data['num_inserts'] - # of videos added to mpx_video table
- *   $data['num_updates'] - # of videos updated
- *   $data['num_inactives'] - # of videos changed from active to inactive
- */
-function media_theplatform_mpx_import_all_videos($type) {
-
-  // Clicked on Videos Sync form.
-  if ($type == 'manual') {
-    global $user;
-    $uid = $user->uid;
-  }
-  else {
-    $uid = 0;
-  }
-  $log = array(
-    'uid' => $uid,
-    'type' => 'video',
-    'type_id' => NULL,
-    'action' => 'import',
-    'details' => $type,
-  );
-  media_theplatform_mpx_insert_log($log);
-
-  // Check if we have a notification stored.
-  $since = media_theplatform_mpx_variable_get('last_notification');
-  // If we do, just check for updates.
-  if ($since) {
-    // Get all IDs of mpxMedia that have been updated since last notification.
-    $changed = media_theplatform_mpx_get_changed_ids($since);
-    if (!$changed) {
-      drupal_set_message(t('All mpxMedia is up to date.'));
-      return FALSE;
-    }
-    $ids = NULL;
-    if (count($changed['actives']) > 0) {
-      $ids = implode(',', $changed['actives']);
-    }
-  }
-  else {
-    $ids = 'all';
-  }
-
-  // Initalize our counters.
-  $num_inserted = 0;
-  $num_updated = 0;
-  $num_unpublished = 0;
-  $num_deleted = 0;
-
-  // Import mpxMedia.
-  if ($ids != NULL) {
-    $videos = media_theplatform_mpx_get_mpxmedia($ids);
-    // If no result, return FALSE.
-    if (!$videos) {
-      return FALSE;
-    }
-    // Loop through published videos and update.
-    foreach ($videos['published'] as $video) {
-      // Import this video.
-      $op = media_theplatform_mpx_import_video($video);
-      // Allow modules to perform additional media import tasks.
-      module_invoke_all('media_theplatform_mpx_import_media', $op, $video);
-      if ($op == 'insert') {
-        $num_inserted++;
-      }
-      elseif ($op == 'update') {
-        $num_updated++;
-      }
-    }
-    // Set any unpublished mpxMedia to inactive.
-    foreach ($videos['unpublished'] as $unpublish_id) {
-      media_theplatform_mpx_set_mpx_video_inactive($unpublish_id, 'unpublished');
-      $num_unpublished++;
-    }
-  }
-
-  // Set any deleted mpxMedia to inactive.
-  if ($since && count($changed['deletes'] > 0)) {
-    foreach ($changed['deletes'] as $delete_id) {
-      media_theplatform_mpx_set_mpx_video_inactive($delete_id, 'deleted');
-      $num_deleted++;
-    }
-  }
-
-  // If this was an update, set last notification.
-  if ($since) {
-    media_theplatform_mpx_variable_set('last_notification', $changed['last_notification']);
-  }
-  // Else set last notification by querying thePlatform for a notification.
-  else {
-    media_theplatform_mpx_set_last_notification();
-  }
-
-  // Return counters as an array.
-  return array(
-    'inserted' => $num_inserted,
-    'updated' => $num_updated,
-    'unpublished' => $num_unpublished,
-    'deleted' => $num_deleted,
-  );
+  return false;
 }
 
 /**
@@ -568,7 +361,7 @@ function media_theplatform_mpx_set_last_notification() {
   if ($result_data) {
     media_theplatform_mpx_variable_set('last_notification', $result_data[0]['id']);
   }
-  return FALSE;
+  return false;
 }
 
 /**
@@ -602,3 +395,432 @@ function media_theplatform_mpx_set_mpx_video_inactive($id, $op) {
   );
   media_theplatform_mpx_insert_log($log);
 }
+
+/**
+ * Video queue item worker callback.
+ */
+function process_media_theplatform_mpx_video_cron_queue_item($item) {
+  switch ($item['queue_operation']) {
+    case 'publish':
+      // Import/Update the video.
+      if (!empty($item['video'])) {
+        $file_field_map = media_theplatform_mpx_variable_get('file_field_map', false);
+        $video = $item['video'];
+        $fields = array();
+        if($file_field_map)
+          $fields = _mpx_fields_extract_mpx_field_values($video, unserialize($file_field_map));
+        // Add item to video queue.
+        $video_item = array(
+          'id' => basename($video['id']),
+          'guid' => $video['guid'],
+          'title' => $video['title'],
+          'description' => $video['description'],
+          'thumbnail_url' => $video['plmedia$defaultThumbnailUrl'],
+          'release_id' => $video['media$content'][0]['plfile$releases'][0]['plrelease$pid'],
+          'fields' => $fields,
+        );
+        // Allow modules to alter the video item for pulling in custom metadata.
+        drupal_alter('media_theplatform_mpx_media_import_item', $video_item, $video);
+        // Perform the import/update.
+        media_theplatform_mpx_import_video($video_item);
+      }
+      break;
+    case 'unpublish':
+      if (!empty($item['unpublish_id'])) {
+        media_theplatform_mpx_set_mpx_video_inactive($item['unpublish_id'], 'unpublished');
+      }
+      break;
+    case 'delete':
+      if (!empty($item['delete_id'])) {
+        media_theplatform_mpx_set_mpx_video_inactive($item['delete_id'], 'deleted');
+      }
+      break;
+  }
+}
+
+/**
+ * Helper that retrieves and returns data from an MPX feed url.
+ */
+function _media_theplatform_mpx_retrieve_feed_data($url) {
+  // Inform site admins we're attempting to retrieve data.
+  drupal_set_message(t('Attempting to retrieve data from the following feed url: @url',
+    array('@url' => $url)));
+  watchdog('media_theplatform_mpx', 'Attempting to retrieve data from the following feed url: @url',
+    array('@url' => $url));
+
+  // Fetch the actual feed data.
+  $feed_request_timeout = media_theplatform_mpx_variable_get('cron_videos_timeout', 120);
+  $result = drupal_http_request($url, array('timeout' => $feed_request_timeout));
+
+  if (!isset($result->data)) {
+    drupal_set_message(t('Video import/update failed.  Could not retrieve data from the following feed request: @url',
+      array('@url' => $url)));
+    watchdog('media_theplatform_mpx', 'Video import/update failed.  Could not retrieve data from the following feed request: @url',
+      array('@url' => $url), WATCHDOG_ERROR);
+    return false;
+  }
+
+  $result_data = drupal_json_decode($result->data);
+
+  if (!$result_data) {
+    drupal_set_message(t('Video import/update failed.  Could not parse JSON data from the following feed request: @url',
+      array('@url' => $url)));
+    watchdog('media_theplatform_mpx', 'Video import/update failed.  Could not parse JSON data from the following feed request: @url',
+      array('@url' => $url), WATCHDOG_ERROR);
+
+    return false;
+  }
+
+  return $result_data;
+}
+
+/**
+ * Helper that retrieves and returns data from an MPX feed url.
+ */
+function _media_theplatform_mpx_process_video_import_feed_data($result_data, $media_to_update = NULL) {
+  // Initalize arrays to store mpxMedia data.
+  $queue_items = array();
+  $num_inserted_or_updated = 0;
+  $num_unpublished = 0;
+  $num_deleted = 0;
+  $published_ids = array();
+  // If we have any inserts/updates, $result_data will be filled
+  // If it is null, we're only performing unpublish/deletes
+  if(isset($result_data)) {
+    // Keys entryCount and entries are only set when there is more than 1 entry.
+    if (isset($result_data['entryCount'])) {
+      foreach ($result_data['entries'] as $video) {
+        $published_ids[] = basename($video['id']);
+
+        // Add item to queue
+        $item = array(
+          'queue_operation' => 'publish',
+          'video' => $video,
+        );
+        $queue_items[] = $item;
+        $num_inserted_or_updated++;
+      }
+    }
+    // If only one row, result_data holds all the mpxMedia data (if its published).
+    // If responseCode is returned, it means 1 id in $ids has been unpublished and would return no data.
+    else if (!isset($result_data['responseCode'])) {
+      $video = $result_data;
+      $published_ids[] = basename($video['id']);
+      // Add item to video queue.
+      $item = array(
+        'queue_operation' => 'publish',
+        'video' => $video,
+      );
+      $queue_items[] = $item;
+      $num_inserted_or_updated++;
+    }
+  }
+
+  // Store any ids that have been unpublished.
+  if (isset($media_to_update)) {
+    $unpublished_ids = array_diff($media_to_update['actives'], $published_ids);
+    // Filter out any ids which haven't been imported.
+    foreach ($unpublished_ids as $key => $unpublished_id) {
+      $video_exists = media_theplatform_mpx_get_mpx_video_by_field('id', $unpublished_id);
+      if (!$video_exists) {
+        unset($unpublished_ids[$key]);
+      }
+      else {
+        // Add to queue.
+        $item = array(
+          'queue_operation' => 'unpublish',
+          'unpublish_id' => $unpublished_id,
+        );
+        $queue_items[] = $item;
+        $num_unpublished++;
+      }
+    }
+  }
+
+  // Collect any deleted mpxMedia.
+  if ($media_to_update && count($media_to_update['deletes'] > 0)) {
+    foreach ($media_to_update['deletes'] as $delete_id) {
+      // Add to queue.
+      $item = array(
+        'queue_operation' => 'delete',
+        'delete_id' => $delete_id,
+      );
+      $queue_items[] = $item;
+      $num_deleted++;
+    }
+  }
+
+  // Add the queue items to the cron queueu.
+  $queue = DrupalQueue::get('media_theplatform_mpx_video_cron_queue');
+  foreach ($queue_items as $queue_item) {
+    $queue->createItem($queue_item);
+  }
+
+  // Notify site admin of number of items processed.
+  drupal_set_message(t(':num mpxMedia queued to be created or updated.', array(':num' => $num_inserted_or_updated)));
+  drupal_set_message(t(':num existing mpxMedia queued to be unpublished.', array(':num' => $num_unpublished)));
+  drupal_set_message(t(':num existing mpxMedia queued to be deleted.', array(':num' => $num_deleted)));
+
+  return true;
+}
+
+/**
+ * Processes a batch import/update.
+ */
+function _media_theplatform_mpx_process_batch_video_import($type) {
+  // Log what type of operation we're performing.
+  global $user;
+  $log = array(
+      'uid' => $type == 'manual' ? $user->uid : 0,
+      'type' => 'video',
+      'type_id' => NULL,
+      'action' => 'batch',
+      'details' => $type,
+    );
+  media_theplatform_mpx_insert_log($log);
+
+  // Get the parts for the batch url and construct it.
+  $batch_url = media_theplatform_mpx_variable_get('proprocessing_batch_url', '');
+  $batch_item_count = media_theplatform_mpx_variable_get('proprocessing_batch_item_count', 0);
+  $current_batch_item = media_theplatform_mpx_variable_get('proprocessing_batch_current_item', 1);
+  $feed_request_item_limit = media_theplatform_mpx_variable_get('cron_videos_per_run', 500);
+
+  $url = $batch_url . '&range=' . $current_batch_item . '-' . ($current_batch_item + ($feed_request_item_limit-1));
+
+  $result_data = _media_theplatform_mpx_retrieve_feed_data($url);
+  if (!$result_data) {
+    return false;
+  }
+
+  $processesing_success = _media_theplatform_mpx_process_video_import_feed_data($result_data);
+  if (!$processesing_success) {
+    return false;
+  }
+
+  $current_batch_item += $feed_request_item_limit;
+  if ($current_batch_item < $batch_item_count) {
+    media_theplatform_mpx_variable_set('proprocessing_batch_current_item', $current_batch_item);
+  }
+  else {
+    // Reset the batch system variables.
+    media_theplatform_mpx_variable_set('proprocessing_batch_url', '');
+    media_theplatform_mpx_variable_set('proprocessing_batch_item_count', '');
+    media_theplatform_mpx_variable_set('proprocessing_batch_current_item', '');
+    // In case this is the end of the initial import batch, set the last
+    // notification id.
+    $last_update_notification = media_theplatform_mpx_variable_get('last_notification');
+    if (!$last_update_notification) {
+      media_theplatform_mpx_set_last_notification();
+    }
+  }
+}
+
+/**
+ * Helper that constructs a video feed url given a comma-delited list of video
+ * ids or "all" for all media (used during initial import).
+ */
+function _media_theplatform_mpx_get_video_feed_url($ids = NULL) {
+  $ids = ($ids == 'all' || !$ids) ? '' : '/' . $ids;
+  $token = media_theplatform_mpx_variable_get('token');
+  $account = urlencode(media_theplatform_mpx_variable_get('account_id'));
+
+  // Note:  We sort by updated date ascending so that newly updated content is
+  // fetched from the feed last.  In cases of large batches, e.g. an initial
+  // import, media can be edited before the batch is complete.  This ensures
+  // these edited media will be fetched toward the end of the batch.
+  $url = 'http://data.media.theplatform.com/media/data/Media' . $ids .
+        '?schema=1.4.0&form=json&pretty=true&byOwnerId=' . $account .
+        '&byContent=byHasReleases%3Dtrue&sort=guid|asc&token=' . $token;
+
+  return $url;
+}
+
+/**
+ * Get the total item count for a given feed url.
+ */
+function _media_theplatform_mpx_get_feed_item_count($url) {
+  $count_url = $url . '&count=true&fields=guid&range=1-1';
+  $feed_request_timeout = media_theplatform_mpx_variable_get('cron_videos_per_run', 120);
+
+  $count_result = drupal_http_request($count_url, array('timeout' => $feed_request_timeout));
+
+  if (empty($count_result->data)) {
+      return false;
+   }
+
+  $count_result_data = drupal_json_decode($count_result->data);
+  $total_result_count = isset($count_result_data['totalResults']) ?
+      $count_result_data['totalResults'] : NULL;
+
+  if (!$total_result_count) {
+    drupal_set_message(t('Video import/update failed.  Could not retrieve the total result count for the following feed request: @url',
+      array('@url' => $count_url)));
+    watchdog('media_theplatform_mpx', 'Video import/update failed.  Could not retrieve the total result count for the following feed request: @url',
+      array('@url' => $count_url), WATCHDOG_ERROR);
+    return false;
+  }
+
+  return $total_result_count;
+}
+
+
+/**
+ * Processes a video update.
+ */
+function _media_theplatform_mpx_process_video_update($since, $type) {
+  // Log what type of operation we're performing.
+  global $user;
+  $log = array(
+    'uid' => $type == 'manual' ? $user->uid : 0,
+    'type' => 'video',
+    'type_id' => NULL,
+    'action' => 'update',
+    'details' => $type,
+  );
+  media_theplatform_mpx_insert_log($log);
+
+  // Get all IDs of mpxMedia that have been updated since last notification.
+  $media_to_update = media_theplatform_mpx_get_changed_ids($since);
+
+  if (!$media_to_update) {
+    $cron_queue = DrupalQueue::get('media_theplatform_mpx_video_cron_queue');
+    $num_cron_queue_items = $cron_queue->numberOfItems();
+    if ($num_cron_queue_items) {
+      $message = t('All mpxMedia is up to date.  There are approximately @num_items videos waiting to be processed.',
+      array('@num_items' => $num_cron_queue_items));
+    }
+    else {
+      $message = t('All mpxMedia is up to date.');
+    }
+    drupal_set_message($message);
+    return false;
+  }
+
+  // If we have actives, join their ids together for the data url
+  if (count($media_to_update['actives']) > 0) {
+    $ids = implode(',', $media_to_update['actives']);
+  }
+  // Otherwise, just handle the deletes/unpublishes now
+  else {
+    $processesing_success = _media_theplatform_mpx_process_video_import_feed_data(null, $media_to_update);
+    if (!$processesing_success) {
+      return false;
+    } else {
+      media_theplatform_mpx_variable_set('last_notification', $media_to_update['last_notification']);
+      return true;
+    }
+  }
+
+  // Get the feed url.
+  $url = _media_theplatform_mpx_get_video_feed_url($ids);
+
+  // Get the total result count for this update.  If it is greater than the feed
+  // request item limit, start a new batch.
+  $total_result_count = count(explode(',', $ids));
+  $feed_request_item_limit = media_theplatform_mpx_variable_get('cron_videos_per_run', 500);
+
+  if ($total_result_count && $total_result_count > $feed_request_item_limit) {
+    // Set last notification for the next update.
+    media_theplatform_mpx_variable_set('last_notification', $media_to_update['last_notification']);
+    // Set starter batch system variables.
+    media_theplatform_mpx_variable_set('proprocessing_batch_url', $url);
+    media_theplatform_mpx_variable_set('proprocessing_batch_item_count', $total_result_count);
+    media_theplatform_mpx_variable_set('proprocessing_batch_current_item', 1);
+    // Perform the first batch operation, not the update.
+    return _media_theplatform_mpx_process_batch_video_import($type);
+  }
+  $result_data = _media_theplatform_mpx_retrieve_feed_data($url);
+
+  if (!$result_data) {
+    return false;
+  }
+  $processesing_success = _media_theplatform_mpx_process_video_import_feed_data($result_data, $media_to_update);
+  if (!$processesing_success) {
+    return false;
+  }
+  // Set last notification for the next update.
+  media_theplatform_mpx_variable_set('last_notification', $media_to_update['last_notification']);
+
+  return true;
+}
+
+/**
+ * Processes a video update.
+ */
+function _media_theplatform_mpx_process_video_import($type) {
+  drupal_set_message('Running initial video import.');
+
+  // Log what type of operation we're performing.
+  global $user;
+  $log = array(
+    'uid' => $type == 'manual' ? $user->uid : 0,
+    'type' => 'video',
+    'type_id' => NULL,
+    'action' => 'import',
+    'details' => $type,
+  );
+  media_theplatform_mpx_insert_log($log);
+
+  // Set the first last notification value for subsequent updates.  Setting it
+  // now ensures that any updates that happen during the import are processed
+  // in subsequent updates.
+  media_theplatform_mpx_set_last_notification();
+
+  // Get the feed url.
+  $url = _media_theplatform_mpx_get_video_feed_url();
+
+  // Get the total result count for this update.  If it is greater than the feed
+  // request item limit, start a new batch.
+  $total_result_count = _media_theplatform_mpx_get_feed_item_count($url);
+  $feed_request_item_limit = media_theplatform_mpx_variable_get('cron_videos_per_run', 500);
+
+  if ($total_result_count && $total_result_count > $feed_request_item_limit) {
+    // Set starter batch system variables.
+    media_theplatform_mpx_variable_set('proprocessing_batch_url', $url);
+    media_theplatform_mpx_variable_set('proprocessing_batch_item_count', $total_result_count);
+    media_theplatform_mpx_variable_set('proprocessing_batch_current_item', 1);
+    // Perform the first batch operation, not the update.
+    return _media_theplatform_mpx_process_batch_video_import($type);
+   }
+
+  $result_data = _media_theplatform_mpx_retrieve_feed_data($url);
+  if (!$result_data) {
+    return false;
+  }
+  $processesing_success = _media_theplatform_mpx_process_video_import_feed_data($result_data);
+  if (!$processesing_success) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Imports all Videos into Media Library.
+ *
+ * @param String $type
+ *   Import type. Possible values 'cron' or 'manual', for sync.
+ *
+ * @return Array
+ *   $data['total'] - # of videos retrieved
+ *   $data['num_inserts'] - # of videos added to mpx_video table
+ *   $data['num_updates'] - # of videos updated
+ *   $data['num_inactives'] - # of videos changed from active to inactive
+ */
+function media_theplatform_mpx_import_all_videos($type) {
+  // Check if we're running a feed request batch.  If so, construct the batch url.
+  $batch_url = media_theplatform_mpx_variable_get('proprocessing_batch_url', '');
+  if ($batch_url) {
+    return _media_theplatform_mpx_process_batch_video_import($type);
+  }
+
+  // Check if we have a notification stored.  If so, run an update.
+  $last_update_notification = media_theplatform_mpx_variable_get('last_notification');
+  if ($last_update_notification) {
+    return _media_theplatform_mpx_process_video_update($last_update_notification, $type);
+  }
+
+  // No last notification set, so this would be an initial import.
+  return _media_theplatform_mpx_process_video_import($type);
+}
+ 
