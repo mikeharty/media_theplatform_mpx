@@ -9,7 +9,9 @@
   Drupal.behaviors.mediaMpxUpload = {
     attach: function (context, settings) {
       // Copy the current node title to the upload title field
-      $("#mpx-upload-form input[name=uploadtitle]").val(parent.jQuery(".node-form #edit-title").val());
+      var nodeEditTitle = parent.jQuery(".node-form #edit-title").val();
+      if(nodeEditTitle != '' && Drupal.settings.mediaThePlatformMpx.copyNodeTitle)
+        $("#mpx-upload-form input[name=uploadtitle]").val(nodeEditTitle);
     }
   };
 

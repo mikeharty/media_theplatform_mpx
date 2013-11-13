@@ -31,6 +31,12 @@ function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
     );
   }
 
+  $form['upload']['media_theplatform_mpx__copy_node_title'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use the node title as the default title for uploads.'),
+    '#default_value' => media_theplatform_mpx_variable_get('copy_node_title', true),
+  );
+
   $form['publishing'] = array(
     '#type' => 'fieldset',
     '#title' => t('Publishing Settings'),
@@ -38,11 +44,22 @@ function media_theplatform_mpx_form_upload_server_settings($form, $form_state) {
     '#collapsed' => FALSE,
   );
 
+  $form['publishing']['media_theplatform_mpx__default_publishing_profiles'] = array(
+    '#type' => 'select',
+    '#multiple' => true,
+    '#required' => true,
+    '#title' => t('Default Publishing Profiles:'),
+    '#options' => media_theplatform_mpx_upload_get_publishing_profiles(),
+    '#default_value' => media_theplatform_mpx_variable_get('default_publishing_profiles'),
+  );
+
   $form['publishing']['media_theplatform_mpx__auto_publish'] = array(
     '#type' => 'checkbox',
     '#title' => t('Publish nodes automatically when videos are finished publishing in mpx.'),
     '#default_value' => media_theplatform_mpx_variable_get('auto_publish', true),
   );
+
+
 
   return system_settings_form($form);
 }

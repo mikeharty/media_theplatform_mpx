@@ -73,6 +73,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#required' => true,
     '#title' => t('Publishing Profiles:'),
     '#options' => media_theplatform_mpx_upload_get_publishing_profiles(),
+    '#default_value' => media_theplatform_mpx_variable_get('default_publishing_profiles'),
   );
 
   $form['uploadform']['submit'] = array(
@@ -96,6 +97,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     drupal_add_js(array('mediaThePlatformMpx' => array('nodeFieldMap' => json_encode(unserialize(media_theplatform_mpx_variable_get('node_field_map', 's:0:"";'))))), 'setting');
     drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_node_field_map') . '/media_theplatform_mpx_node_field_map.js');
   }
+  drupal_add_js(array('mediaThePlatformMpx' => array('copyNodeTitle' => media_theplatform_mpx_variable_get('copy_node_title', true))), 'setting');
 
   return $form;
 }
