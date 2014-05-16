@@ -36,19 +36,19 @@ function media_theplatform_mpx_upload_menu() {
     'access arguments' => array('administer mpx account'),
   );
 
-  $items['mpx-worker/upload/%'] = array(
-    'title' => t('MPX Upload Callback'),
+  $items['mpx-worker/publish/%'] = array(
+    'title' => t('MPX Publish Callback'),
     'description' => '',
-    'page callback' => 'media_theplatform_mpx_upload_worker',
+    'page callback' => 'media_theplatform_mpx_publish_worker',
     'page arguments' => array(2),
     'type' => MENU_CALLBACK,
     'access arguments' => array('access content'),
   );
 
-  $items['mpx-worker/upload/%/status'] = array(
-    'title' => t('MPX Status Callback'),
+  $items['mpx-worker/publish/%/status'] = array(
+    'title' => t('MPX Publish Status Callback'),
     'description' => '',
-    'page callback' => 'media_theplatform_mpx_upload_worker_status',
+    'page callback' => 'media_theplatform_mpx_publish_status',
     'page arguments' => array(2),
     'type' => MENU_CALLBACK,
     'access arguments' => array('access content'),
@@ -132,7 +132,7 @@ function media_theplatform_mpx_upload_cron() {
       ->fetchAll();
 
     foreach($upload_items as $upload_item) {
-      media_theplatform_mpx_upload_worker($upload_item->id);
+      media_theplatform_mpx_publish_worker($upload_item->id);
     }
   }
 

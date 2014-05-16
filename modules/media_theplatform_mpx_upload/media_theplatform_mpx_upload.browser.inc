@@ -9,7 +9,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#title' => t('Upload video'),
     '#collapsible' => FALSE,
     '#collapsed' => FALSE,
-    '#description' => t('Upon submission, this form will start a background task which uploads your video and initiates publishing automatically. Fields which you have mapped are available on this form and will be saved to the created file and MPX.'),
+    '#description' => t('Upon submission, this form will start a background task which initiates publishing automatically. Fields which you have mapped are available on this form and will be saved to the created file and MPX.'),
     '#prefix' => '<div id="scrollable">',
     '#suffix' => '</div>',
   );
@@ -90,7 +90,10 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
   $form['#suffix'] = '</div>';
 
   // Add media_theplatform_mpx_upload browser javascript and CSS.
+  drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/jquery-1.11.0.min.js');
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/media_theplatform_mpx.upload.js');
+  drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/thePlatformUpload.js');
+  drupal_add_js(array('mediaThePlatformMpx' => array('fileFieldMap' => json_encode(unserialize(media_theplatform_mpx_variable_get('file_field_map', 's:0:"";'))))), 'setting');
   drupal_add_css(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/media_theplatform_mpx.upload.css');
   // Add node field mapping js if enabled
   if(module_exists('media_theplatform_mpx_node_field_map')) {
@@ -110,54 +113,37 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
  * @return Validated form with messages
  */
 function ajax_mpx_media_upload_callback($form, $form_state) {
-  $limits['extensions'] = '3g2 3gp asf avi dv flv f4v m4v mov mp4 mpeg mpg mts m2ts qt wmv';
-  $validators = array(
-    'file_validate_extensions' => array($limits['extensions']),
-  );
-
-  $file = file_save_upload('fileupload', $validators, drupal_realpath(file_default_scheme() . ':/'));
-
-  if (!$file) {
-    drupal_set_message(t('Only Video files are allowed here.'), 'error');
-    return $form;
-  }
-
-  if ($file->filesize <= 0) {
-    // Some uploaded files had zero size, that's an error.
-    drupal_set_message(t('Uploaded file not found. Are you sure that you uploaded an existing file?'), 'error');
-    return $form;
-  }
-
-  if (form_get_errors()) {
-    return $form;
-  }
-
-  // Upload the file to MPX
-  $fields = media_theplatform_mpx_process_file_form_fields($form_state['values']);
+  // Pull field values from form
   $title = $form_state['values']['uploadtitle'];
+  $fields = media_theplatform_mpx_process_file_form_fields($form_state['values']);
   $publishing_profiles = array_keys($form_state['values']['publish_profiles']);
-  $upload = media_theplatform_mpx_upload_video(drupal_realpath($file->uri), $title, $fields, $publishing_profiles);
 
-  if ($upload) {
-    $video = new StdClass();
-    $video->guid = $upload->guid;
-    $video->id = $upload->id;
-    $video->title = $upload->title;
-    $video->player = $form_state['values']['upload_player'];
-  } else {
-    // If the upload failed, it will use DSM to push errors to the page, just return the form
-    return $form;
+  // @todo: These need to be added to the form, they will come back from the upload api
+  $media_guid = $form_state['values']['media_guid'];
+  $media_id = $form_state['values']['media_id'];
+
+  $mpx_queue_id = _mpx_uploads_insert($media_guid, $media_id, $publishing_profiles, $title);
+
+  // If the HTTPRL module is enabled, trigger a non-blocking
+  // request to the publishing worker. If not, it will have to wait for cron.
+  if(module_exists('httprl')) {
+    $trigger_upload_worker = _mpx_publish_worker_trigger($mpx_queue_id);
+    if($trigger_upload_worker['status'] == 'error') {
+      drupal_set_message($trigger_upload_worker['response'], 'error');
+      watchdog('media_theplatform_mpx_upload', t('Unable to reach MPX Upload Queue Worker. Will attempt upload on next cron run.'), array(), WATCHDOG_ERROR);
+      return false;
+    }
   }
 
   // Create video file locally, set fields, and insert into MPX tables
   // Insert video function requires an array
-  $video_array['id'] = substr($video->id, strrpos($video->id, '/')+1); //extracting the numerical id from the full uri
-  $video_array['guid'] = $video->guid;
-  $video_array['title'] = $video->title;
+  $video_array['id'] = substr($media_id, strrpos($media_id, '/')+1); //extracting the numerical id from the full uri
+  $video_array['guid'] =  $media_guid;
+  $video_array['title'] = $title;
   $video_array['description'] = '';
   $video_array['thumbnail_url'] = '';
   $video_array['fields'] = $fields;
-  $video_array['player_id'] = $video->player;
+  $video_array['player_id'] = $form_state['values']['upload_player'];
 
   media_theplatform_mpx_insert_video($video_array, null);
 

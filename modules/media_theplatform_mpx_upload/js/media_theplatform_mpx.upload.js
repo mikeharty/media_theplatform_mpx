@@ -4,8 +4,9 @@
  * I'm using name and type selectors throughout this code
  * to deal with Drupal's tendency to increment field IDs
  */
-(function ($) {
+jq1110 = $.noConflict(true);
 
+(function ($) {
   Drupal.behaviors.mediaMpxUpload = {
     attach: function (context, settings) {
       // Copy the current node title to the upload title field
@@ -25,4 +26,4 @@
     // Close the browser
     $('#media-tab-theplatform_mpx_mpxmedia .form-actions input[type=submit]').trigger('click');
   };
-}(jQuery));
+}(jq1110));

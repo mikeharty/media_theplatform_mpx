@@ -38,20 +38,6 @@ function media_theplatform_mpx_upload_schema() {
         'not null' => TRUE,
         'default' => ''
       ),
-      'file_path' => array(
-        'description' => 'Path to upload file',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'upload_server' => array(
-        'description' => 'URL of upload server',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-        'default' => '',
-      ),
       'publish_profiles' => array(
         'description' => 'Profiles to publish media with when upload is completed',
         'type' => 'blob',
