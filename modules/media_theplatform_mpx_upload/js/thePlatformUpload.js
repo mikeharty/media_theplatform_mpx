@@ -37,7 +37,7 @@ var thePlatformUpload = {};
       this.uploadedFragments = 0;
       this.uploadAttempts = 0;
       this.percentUploaded = 0;
-      this.createMediaObject(title);
+      this.createMediaObject(title, fields);
     },
 
     /**
@@ -68,7 +68,7 @@ var thePlatformUpload = {};
      * Creates a new Media Object in MPX
      * @param params - Parameter object
      */
-    createMediaObject: function(title) {
+    createMediaObject: function(title, fields) {
       this.statusCallback('Creating new media object in MPX.');
       this.file = document.getElementById( this.fileElementId ).files[0];
       this.fragments = this.fragFile(this.file);
@@ -81,18 +81,17 @@ var thePlatformUpload = {};
           pl1: this.accountId
         },
         entries: [
-          {
-            title: title,
-            plmedia$approved: true
-          }
+          fields
         ]
       };
+
+      mediaObj.entries[0].plmedia$approved = true;
 
       var url = this.urls.media_data + '/media/data/Media/list?' +
         'schema=1.2' +
         '&form=json' +
         '&account=' + encodeURIComponent(this.accountId) +
-        '&token='+ encodeURIComponent(this.token);
+        '&token=' + encodeURIComponent(this.token);
 
       var me = this;
 
@@ -168,7 +167,7 @@ var thePlatformUpload = {};
         '&_mediaId=' + this.mediaObj.id +
         '&_filePath=sample.mov' +
         '&_fileSize='+this.file.size +
-        '&_mediaFileInfo.format= ' + 'Matroska' +
+        '&_mediaFileInfo.format= ' + 'QT' +
         '&_serverId=' + encodeURIComponent(this.uploadServerId);
 
       var me = this;
@@ -291,12 +290,13 @@ var thePlatformUpload = {};
           // clear the fragments from memory
           me.fragments = null;
           me.statusCallback('Upload completed.');
-          me.finishCallback();
+          me.finishCallback(me.mediaObj.guid, me.mediaObj.id);
         },
+        //@todo: add code to handle timeout and retry
         error: function( data ) {
           if(data.status == 200) {
             me.statusCallback('Upload completed.');
-            me.finishCallback(me.mediaObj.guid);
+            me.finishCallback(me.mediaObj.guid, me.mediaObj.id);
           } else {
             me.statusCallback('Failed to complete upload. Response: ' + JSON.stringify(data));
           }

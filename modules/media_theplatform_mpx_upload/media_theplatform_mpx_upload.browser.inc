@@ -46,6 +46,8 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     foreach($form['uploadform']['filefields'] as $key => $val) {
       if(strpos($key, '#') !== 0 && !in_array($key, array_keys($field_map)))
         unset($form['uploadform']['filefields'][$key]);
+      else if(strpos($key, '#') !== 0)
+        $form['uploadform']['filefields'][$key]['#attributes'] = array('data-mpxField' => $field_map[$key]);
     }
   }
 
@@ -76,6 +78,18 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#default_value' => media_theplatform_mpx_variable_get('default_publishing_profiles'),
   );
 
+  $form['uploadform']['media_guid'] = array(
+    '#type' => 'hidden',
+  );
+
+  $form['uploadform']['media_id'] = array(
+    '#type' => 'hidden',
+  );
+
+  $form['uploadform']['status'] = array(
+    '#markup' => '<div id="upload_status"></div>',
+  );
+
   $form['uploadform']['submit'] = array(
     '#type' => 'button',
     '#name' => 'upload',
@@ -83,6 +97,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
     '#ajax' => array(
       'callback' => 'ajax_mpx_media_upload_callback',
       'wrapper' => 'mpx-upload-form',
+      'event' => 'finish',
     ),
     '#weight' => 1000,
   );
@@ -93,7 +108,19 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/jquery-1.11.0.min.js');
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/media_theplatform_mpx.upload.js');
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/thePlatformUpload.js');
-  drupal_add_js(array('mediaThePlatformMpx' => array('fileFieldMap' => json_encode(unserialize(media_theplatform_mpx_variable_get('file_field_map', 's:0:"";'))))), 'setting');
+  drupal_add_js(
+    array(
+      'mediaThePlatformMpx' =>
+        array(
+          'fileFieldMap' => json_encode(unserialize(media_theplatform_mpx_variable_get('file_field_map', 's:0:"";'))),
+        ),
+        'mediaMpxUpload' =>
+        array(
+          'accountId' => media_theplatform_mpx_variable_get('account_id'),
+          'token' => media_theplatform_mpx_variable_get('token'),
+          'uploadServer' => media_theplatform_mpx_variable_get('upload_server'),
+        )
+    ), 'setting');
   drupal_add_css(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/media_theplatform_mpx.upload.css');
   // Add node field mapping js if enabled
   if(module_exists('media_theplatform_mpx_node_field_map')) {
