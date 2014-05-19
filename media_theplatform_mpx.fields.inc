@@ -34,8 +34,6 @@ function _mpx_fields_get_mpx_fields() {
       return false;
     }
 
-    die(print_r($response));
-
     $fields = array();
     foreach($response['response']->entries as $field) {
       $fields[$field->{'plfield$fieldName'}]->title = $field->title;
