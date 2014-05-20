@@ -37,6 +37,9 @@ var thePlatformUpload = {};
       this.uploadedFragments = 0;
       this.uploadAttempts = 0;
       this.percentUploaded = 0;
+      this.file = document.getElementById( this.fileElementId ).files[0];
+      this.fileName = $('#'+this.fileElementId).val().split('/').pop().split('\\').pop();
+      this.fragments = this.fragFile(this.file);
       this.createMediaObject(title, fields);
     },
 
@@ -70,8 +73,6 @@ var thePlatformUpload = {};
      */
     createMediaObject: function(title, fields) {
       this.statusCallback('Creating new media object in MPX.');
-      this.file = document.getElementById( this.fileElementId ).files[0];
-      this.fragments = this.fragFile(this.file);
 
       var mediaObj = {
         $xmlns: {
@@ -154,6 +155,12 @@ var thePlatformUpload = {};
       });
     },
 
+    // @todo: This needs to do an AJAX request to a new path in Drupal (not implemented)
+    // @todo: which returns the format title for the provided file name
+    getFormat: function() {
+      return 'QT';
+    },
+
     /**
      * Initiates an upload with the upload server
      */
@@ -165,9 +172,9 @@ var thePlatformUpload = {};
         '&account=' + encodeURIComponent(this.accountId) +
         '&_guid=' + this.mediaObj.guid +
         '&_mediaId=' + this.mediaObj.id +
-        '&_filePath=sample.mov' +
+        '&_filePath=' + this.fileName +
         '&_fileSize='+this.file.size +
-        '&_mediaFileInfo.format= ' + 'QT' +
+        '&_mediaFileInfo.format=' + this.getFormat() +
         '&_serverId=' + encodeURIComponent(this.uploadServerId);
 
       var me = this;
