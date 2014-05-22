@@ -26,13 +26,15 @@ var thePlatformUpload = {};
      * @param uploadServerId
      * @param statusCallback
      * @param finishCallback
+     * @param errorCallback
      */
-    uploadFile: function(title, fields, fileElementId, accountId, token, uploadServerId, statusCallback, finishCallback) {
+    uploadFile: function(title, fields, fileElementId, accountId, token, uploadServerId, statusCallback, finishCallback, errorCallback) {
       this.token = token;
       this.accountId = accountId;
       this.uploadServerId = uploadServerId;
       this.statusCallback = statusCallback;
       this.finishCallback = finishCallback;
+      this.errorCallback = errorCallback;
       this.fileElementId = fileElementId;
       this.uploadedFragments = 0;
       this.uploadAttempts = 0;
@@ -40,7 +42,9 @@ var thePlatformUpload = {};
       this.file = document.getElementById( this.fileElementId ).files[0];
       this.fileName = $('#'+this.fileElementId).val().split('/').pop().split('\\').pop();
       this.fragments = this.fragFile(this.file);
-      this.createMediaObject(title, fields);
+      this.title = title;
+      this.fields = fields;
+      this.getFormat();
     },
 
     /**
@@ -71,7 +75,7 @@ var thePlatformUpload = {};
      * Creates a new Media Object in MPX
      * @param params - Parameter object
      */
-    createMediaObject: function(title, fields) {
+    createMediaObject: function() {
       this.statusCallback('Creating new media object in MPX.');
 
       var mediaObj = {
@@ -82,7 +86,7 @@ var thePlatformUpload = {};
           pl1: this.accountId
         },
         entries: [
-          fields
+          this.fields
         ]
       };
 
@@ -112,10 +116,12 @@ var thePlatformUpload = {};
             me.getUploadServerURL()
           } else {
             me.statusCallback('Error occurred while creating media object: ' + JSON.stringify(data));
+            me.errorCallback();
           }
         },
         error: function(data){
           me.statusCallback('Unable to reach media data server, please try again later.');
+          me.errorCallback();
         },
         contentType: 'text/plain'
       });
@@ -146,20 +152,43 @@ var thePlatformUpload = {};
             me.startUpload();
           } else {
             me.statusCallback('Error while finding upload server: ' + JSON.stringify(data));
+            me.errorCallback();
           }
         },
         error: function(data){
           me.statusCallback('Error while finding upload server: ' + JSON.stringify(data));
+          me.errorCallback();
         },
         contentType: 'text/plain'
       });
     },
 
-    // @todo: This needs to do an AJAX request to a new path in Drupal (not implemented)
-    // @todo: which returns the format title for the provided file name
+
+      /**
+       * Method that issues an ajax call to determine the title associated with
+       * the file format then starts the upload file callback process on success.
+       */
     getFormat: function() {
-      return 'QT';
-    },
+        // Extract the extension from the filename.
+        var pieces = this.fileName.split(".");
+        var ext = pieces.pop();
+        var url = '/admin/config/media/theplatform/mpx-formats/' + ext;
+        var me = this;
+
+        $.ajax({
+            type: 'POST',
+            url: url,
+            success: $.proxy(function(data){
+                data = JSON.parse(data);
+                me.fileExt = data.response;
+                me.createMediaObject();
+            }, this),
+            error: function(data){
+                me.statusCallback('Error while finding upload server: ' + JSON.stringify(data));
+                me.errorCallback();
+            }
+        });
+   },
 
     /**
      * Initiates an upload with the upload server
@@ -174,7 +203,7 @@ var thePlatformUpload = {};
         '&_mediaId=' + this.mediaObj.id +
         '&_filePath=' + this.fileName +
         '&_fileSize='+this.file.size +
-        '&_mediaFileInfo.format=' + this.getFormat() +
+        '&_mediaFileInfo.format=' + this.fileExt +
         '&_serverId=' + encodeURIComponent(this.uploadServerId);
 
       var me = this;
@@ -196,6 +225,7 @@ var thePlatformUpload = {};
             me.uploadFragments();
           } else {
             me.statusCallback('Unable to reach upload server, please try again later.');
+            me.errorCallback();
           }
         }
       });
@@ -262,6 +292,7 @@ var thePlatformUpload = {};
             if(me.uploadAttempts == 5) {
               me.statusCallback('Unable to upload fragment after 5 tries. Please try again later.');
               me.cancelUpload();
+              me.errorCallback();
             } else {
               me.uploadAttempts++;
               me.statusCallback('Upload server not yet ready, please wait...');
@@ -306,6 +337,7 @@ var thePlatformUpload = {};
             me.finishCallback(me.mediaObj.guid, me.mediaObj.id);
           } else {
             me.statusCallback('Failed to complete upload. Response: ' + JSON.stringify(data));
+            me.errorCallback();
           }
         }
       });
@@ -335,8 +367,10 @@ var thePlatformUpload = {};
           if(data.status == 200) {
             me.statusCallback('Upload cancelled due to error uploading fragments. Please try again later.');
             me.finishCallback(null);
+            // Don't re-enable the submit button in this case.
           } else {
             me.statusCallback('Failed to cancel upload. Response: ' + JSON.stringify(data));
+            me.errorCallback();
           }
         }
       });

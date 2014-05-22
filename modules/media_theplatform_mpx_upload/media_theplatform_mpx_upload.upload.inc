@@ -354,26 +354,33 @@ function media_theplatform_mpx_publish_status($fileId) {
   return $fileId;
 }
 
+
 /**
- * Finds the MPX-valid format name for a file extension
+ * Callback method that takes in an MPX extension and returns the
+ * associated title.
  * @param $extension
  * @return array
  */
-function _mpx_format($extension) {
+function media_theplatform_mpx_format_title($extension) {
   if(!$formats = cache_get('mpx_upload:xml_formats')) {
     $formats_XML = simplexml_load_file('http://web.theplatform.com/descriptors/enums/format.xml');
     $formats = array();
+
     foreach($formats_XML->format as $format) {
       foreach($format->extensions->extension as $ext) {
         $formats[(string) $ext] = (string) $format->title;
       }
     }
     cache_set('mpx_upload:xml_formats', $formats);
-  } else {
+  }
+  else {
     $formats = $formats->data;
   }
-  if(isset($formats[$extension]))
-    return array('status' => 'success', 'response' => $formats[$extension]);
-  else
-    return array('status' => 'error', 'response' => t('MPX format not found for extension: @extension', array('@extension' => $extension)));
+  if (isset($formats[$extension])) {
+    $response = array('status' => 'success', 'response' => $formats[$extension]);
+  }
+  else {
+    $response = array('status' => 'error', 'response' => t('MPX format not found for extension: @extension', array('@extension' => $extension)));
+  }
+  echo json_encode($response);
 }

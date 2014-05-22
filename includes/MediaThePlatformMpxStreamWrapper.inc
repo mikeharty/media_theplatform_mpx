@@ -28,9 +28,9 @@ class MediaThePlatformMpxStreamWrapper extends MediaReadOnlyStreamWrapper {
     if ($url['host'] == 'm') {
       $params['mpx_type'] = 'video';
       // Use mpxMedia's Guid as the mpx_id for output HTML.
-      $params['mpx_id'] = $parts[1];
+      $params['mpx_id'] = isset($parts[1]) ? $parts[1] : '';
       // The fid of mpxPlayer to render this mpxMedia with.
-      $params['player_fid'] = $parts[3];
+      $params['player_fid'] = isset($parts[3]) ? $parts[3] : '';
       // fallback to default.
       if (!$params['player_fid']) {
         $params['player_fid'] = media_theplatform_mpx_variable_get('default_player_fid');

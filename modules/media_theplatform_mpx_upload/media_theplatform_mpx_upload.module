@@ -62,6 +62,15 @@ function media_theplatform_mpx_upload_menu() {
     'access arguments' => array('access content'),
   );
 
+  $items[MPX_PATH_ADMIN . '/mpx-formats/%'] = array(
+    'title' => t('MPX Format Title From Extension'),
+    'description' => '',
+    'page callback' => 'media_theplatform_mpx_format_title',
+    'page arguments' => array(5),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('_media_theplatform_mpx_access'),
+  );
+
   return $items;
 }
 

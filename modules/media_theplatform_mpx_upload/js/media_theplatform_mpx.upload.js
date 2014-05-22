@@ -18,9 +18,11 @@ jq1110 = $.noConflict(true);
       var me = this;
 
       $('#media-theplatform-mpx-upload-form').submit(function (e) {
-        // @todo: we should probably disable the submit button once this has started
+
         if(me.uploadFinished == false) {
           e.preventDefault();
+          // Disable submit button.
+          $('#edit-submit--2').prop("disabled",true);
 
           var title = $("#mpx-upload-form input[name=uploadtitle]").val(),
             fields = me.getFieldData(),
@@ -28,9 +30,10 @@ jq1110 = $.noConflict(true);
             accountId = Drupal.settings.mediaMpxUpload.accountId,
             uploadServer = Drupal.settings.mediaMpxUpload.uploadServer,
             statusCallback = Drupal.behaviors.mediaThePlatformMpx.uploadStatus,
-            finishCallback = Drupal.behaviors.mediaThePlatformMpx.finished;
+            finishCallback = Drupal.behaviors.mediaThePlatformMpx.finished,
+            errorCallback = Drupal.behaviors.mediaThePlatformMpx.error;
 
-          thePlatformUpload.uploadFile(title, fields, 'edit-fileupload', accountId, token, uploadServer, statusCallback, finishCallback);
+          thePlatformUpload.uploadFile(title, fields, 'edit-fileupload', accountId, token, uploadServer, statusCallback, finishCallback, errorCallback);
           return false;
         }
       });
@@ -88,6 +91,11 @@ jq1110 = $.noConflict(true);
     },
 
     uploadFinished: false,
+
+    error: function() {
+        // Enable the 'Upload and Attach' submit button.
+        $('#edit-submit--2').prop("disabled",false);
+    },
 
     finished: function(media_guid, media_id) {
       this.uploadFinished = true;
