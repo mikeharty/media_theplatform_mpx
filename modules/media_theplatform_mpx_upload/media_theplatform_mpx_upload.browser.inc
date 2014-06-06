@@ -106,6 +106,7 @@ function media_theplatform_mpx_upload_form($form, &$form_state) {
 
   // Add media_theplatform_mpx_upload browser javascript and CSS.
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/jquery-1.11.0.min.js');
+  drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/rsvp-latest.js');
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/media_theplatform_mpx.upload.js');
   drupal_add_js(drupal_get_path('module', 'media_theplatform_mpx_upload') . '/js/thePlatformUpload.js');
   drupal_add_js(
