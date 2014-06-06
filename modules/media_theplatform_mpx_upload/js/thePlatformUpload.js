@@ -284,12 +284,12 @@ var thePlatformUpload = {};
           var fragments = me.fragments;
 
           var url = me.uploadServerURL + '/web/Upload/uploadFragment?';
-          url += 'schema=1.1';
-          url += '&token=' + encodeURIComponent(me.token);
-          url += '&account=' + encodeURIComponent(me.accountId);
-          url += '&_guid=' + me.mediaObj.guid;
-          url += '&_offset=' + me.uploadedFragments*me.fragSize;
-          url += '&_size=' + fragments[me.uploadedFragments].size;
+              url += 'schema=1.1';
+              url += '&token=' + encodeURIComponent(me.token);
+              url += '&account=' + encodeURIComponent(me.accountId);
+              url += '&_guid=' + me.mediaObj.guid;
+              url += '&_offset=' + me.uploadedFragments*me.fragSize;
+              url += '&_size=' + fragments[me.uploadedFragments].size;
 
           $.ajax( {
             url: url,
@@ -356,10 +356,10 @@ var thePlatformUpload = {};
     finishUpload: function() {
       this.statusCallback('Finalizing upload.');
       var url = this.uploadServerURL + '/web/Upload/finishUpload?';
-      url += 'schema=1.1';
-      url += '&token=' + encodeURIComponent(this.token);
-      url += '&account=' + encodeURIComponent(this.accountId);
-      url += '&_guid=' + this.mediaObj.guid;
+          url += 'schema=1.1';
+          url += '&token=' + encodeURIComponent(this.token);
+          url += '&account=' + encodeURIComponent(this.accountId);
+          url += '&_guid=' + this.mediaObj.guid;
 
       var data = "finished";
       var me = this;
@@ -393,10 +393,10 @@ var thePlatformUpload = {};
     cancelUpload: function() {
       this.statusCallback('Cancelling upload...');
       var url = this.uploadServerURL + '/web/Upload/cancelUpload?';
-      url += 'schema=1.1';
-      url += '&token=' + encodeURIComponent(this.token);
-      url += '&account=' + encodeURIComponent(this.accountId);
-      url += '&_guid=' + this.mediaObj.guid;
+          url += 'schema=1.1';
+          url += '&token=' + encodeURIComponent(this.token);
+          url += '&account=' + encodeURIComponent(this.accountId);
+          url += '&_guid=' + this.mediaObj.guid;
 
       var me = this;
 
