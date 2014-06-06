@@ -79,7 +79,7 @@ jq1110 = $.noConflict(true);
         var $field = $(this).find('input, select, textarea');
         var mpxField = $(this).data('mpxfield');
         if(mpxField == 'categories') {
-          if($field.length && $field.val().length)
+          if($field.length && $field.val())
             fields.categories = me.buildCategoryList($field);
         } else {
           // @todo: test that other fields are being updated
