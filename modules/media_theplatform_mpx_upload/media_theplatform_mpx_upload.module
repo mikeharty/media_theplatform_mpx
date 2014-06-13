@@ -68,7 +68,7 @@ function media_theplatform_mpx_upload_menu() {
     'page callback' => 'media_theplatform_mpx_format_title',
     'page arguments' => array(5),
     'type' => MENU_CALLBACK,
-    'access arguments' => array('_media_theplatform_mpx_access'),
+		'access callback' => '_media_theplatform_mpx_access',
   );
 
   return $items;
