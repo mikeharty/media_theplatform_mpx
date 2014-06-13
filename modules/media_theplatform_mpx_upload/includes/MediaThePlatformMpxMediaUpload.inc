@@ -21,7 +21,7 @@ class MediaThePlatformMpxMediaUpload extends MediaBrowserPlugin {
    * Implements MediaBrowserPlugin::view().
    */
   public function view() {
-    if (user_access('administer media')) {
+    if (user_access('administer media') || user_access('administer files')) {
       $build['form'] = drupal_get_form('media_theplatform_mpx_upload_form', 'videos');
       return $build;
     }
