@@ -330,7 +330,7 @@ var thePlatformUpload = {};
               if(data.responseCode == 200 && me.uploadedFragments == fragments.length-1) {
                 me.statusCallback('All fragments uploaded.');
               } else {
-                if(me.uploadAttempts == 5) {
+                if(me.uploadAttempts == 15) {
                   me.statusCallback('Unable to upload fragment after 5 tries. Please try again later.');
                   me.errorCallback();
                   reject();
